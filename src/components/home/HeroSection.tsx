@@ -13,13 +13,19 @@ const categories = [
   { name: 'Food', icon: '🍔', color: 'bg-category-food' },
 ];
 
-const floatingImages = [
-  { id: 1, rotate: -8, delay: 0, x: -60, y: -20 },
-  { id: 2, rotate: 5, delay: 0.5, x: 40, y: 30 },
-  { id: 3, rotate: -3, delay: 1, x: -30, y: 60 },
-  { id: 4, rotate: 8, delay: 1.5, x: 50, y: -40 },
-  { id: 5, rotate: -5, delay: 0.8, x: -50, y: 40 },
-  { id: 6, rotate: 4, delay: 1.2, x: 30, y: -30 },
+// Large floating background cards positioned around edges
+const backgroundCards = [
+  // Left side cards
+  { id: 1, left: '3%', top: '15%', width: 180, height: 240, rotate: -12, delay: 0 },
+  { id: 2, left: '8%', top: '55%', width: 140, height: 200, rotate: 8, delay: 0.3 },
+  { id: 3, left: '15%', top: '75%', width: 120, height: 160, rotate: -5, delay: 0.6 },
+  // Right side cards
+  { id: 4, right: '3%', top: '20%', width: 160, height: 220, rotate: 10, delay: 0.2 },
+  { id: 5, right: '10%', top: '50%', width: 180, height: 260, rotate: -8, delay: 0.5 },
+  { id: 6, right: '5%', top: '80%', width: 130, height: 180, rotate: 15, delay: 0.8 },
+  // Top center cards (smaller, more subtle)
+  { id: 7, left: '35%', top: '5%', width: 100, height: 140, rotate: -18, delay: 0.4 },
+  { id: 8, right: '30%', top: '8%', width: 90, height: 120, rotate: 12, delay: 0.7 },
 ];
 
 const HeroSection = () => {
@@ -44,37 +50,45 @@ const HeroSection = () => {
       {/* Animated gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background pointer-events-none" />
       
-      {/* Floating 3D image cards */}
+      {/* Large floating background cards */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {floatingImages.map((img, index) => (
+        {backgroundCards.map((card) => (
           <motion.div
-            key={img.id}
-            className="absolute hidden lg:block"
+            key={card.id}
+            className="absolute hidden md:block"
             style={{
-              left: `${15 + (index % 3) * 30}%`,
-              top: `${20 + Math.floor(index / 3) * 40}%`,
+              left: card.left,
+              right: card.right,
+              top: card.top,
+              width: card.width,
+              height: card.height,
             }}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ 
-              opacity: 0.7, 
+              opacity: 1, 
               scale: 1,
-              x: [img.x, img.x + 10, img.x],
-              y: [img.y, img.y - 15, img.y],
-              rotateX: [-5, 5, -5],
-              rotateY: [img.rotate, img.rotate + 5, img.rotate],
+              y: [0, -10, 0],
             }}
             transition={{
-              delay: img.delay,
-              duration: 6 + index,
+              delay: card.delay,
+              duration: 5 + card.id * 0.5,
               repeat: Infinity,
               ease: "easeInOut"
             }}
           >
             <div 
-              className="w-32 h-44 rounded-2xl shadow-card-hover overflow-hidden transform-gpu"
-              style={{ transform: `rotate(${img.rotate}deg)` }}
+              className="w-full h-full rounded-3xl overflow-hidden transform-gpu"
+              style={{ 
+                transform: `rotate(${card.rotate}deg)`,
+                background: 'linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--muted)) 100%)',
+                border: '1px solid hsl(var(--border))',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              }}
             >
-              <div className="w-full h-full bg-gradient-to-br from-primary/30 to-accent/30 backdrop-blur-sm" />
+              {/* Inner gradient overlay for depth */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
+              {/* Subtle shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent" />
             </div>
           </motion.div>
         ))}
