@@ -165,7 +165,7 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
 
           {/* Info Panel */}
           <motion.div 
-            className="w-full max-w-3xl glass rounded-2xl p-6 md:p-8"
+            className="w-full max-w-2xl bg-card rounded-2xl p-6 md:p-8 border border-border"
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
@@ -175,77 +175,74 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
               <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
                 {image.title}
               </h2>
-              <p className="text-muted-foreground">
-                By <span className="text-foreground font-medium">@{image.author}</span>
+              <p className="text-muted-foreground text-sm">
+                By <span className="text-primary font-medium">@{image.author}</span>
                 {' · '}{image.downloads.toLocaleString()} downloads
               </p>
             </div>
 
             {/* Download Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <Button 
-                variant="gradient" 
-                size="lg" 
-                className="gap-3 h-auto py-4 flex-col"
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <button 
                 onClick={() => handleDownload('mobile')}
                 disabled={isDownloading === 'mobile'}
+                className="relative overflow-hidden rounded-xl p-4 text-center transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(199, 89%, 48%) 0%, hsl(262, 83%, 58%) 50%, hsl(330, 81%, 60%) 100%)',
+                }}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center gap-2 text-white font-semibold mb-1">
                   {isDownloading === 'mobile' ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Smartphone className="h-5 w-5" />
+                    <Smartphone className="h-4 w-4" />
                   )}
-                  <span className="font-semibold">
-                    {isDownloading === 'mobile' ? 'Downloading...' : 'Download Mobile'}
-                  </span>
+                  Download Mobile
                 </div>
-                <span className="text-xs opacity-80">1080 × 1920 · JPG</span>
-              </Button>
-              <Button 
-                variant="gradient" 
-                size="lg" 
-                className="gap-3 h-auto py-4 flex-col"
+                <span className="text-white/70 text-xs">1080 × 1920 · JPG</span>
+              </button>
+              <button 
                 onClick={() => handleDownload('desktop')}
                 disabled={isDownloading === 'desktop'}
+                className="relative overflow-hidden rounded-xl p-4 text-center transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(262, 83%, 58%) 0%, hsl(199, 89%, 48%) 50%, hsl(330, 81%, 60%) 100%)',
+                }}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center gap-2 text-white font-semibold mb-1">
                   {isDownloading === 'desktop' ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Monitor className="h-5 w-5" />
+                    <Monitor className="h-4 w-4" />
                   )}
-                  <span className="font-semibold">
-                    {isDownloading === 'desktop' ? 'Downloading...' : 'Download Desktop'}
-                  </span>
+                  Download Desktop
                 </div>
-                <span className="text-xs opacity-80">1920 × 1080 · JPG</span>
-              </Button>
+                <span className="text-white/70 text-xs">1920 × 1080 · JPG</span>
+              </button>
             </div>
 
-            <Button 
-              variant="outline" 
-              className="w-full gap-2"
+            <button 
               onClick={() => handleDownload('original')}
               disabled={isDownloading === 'original'}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all disabled:opacity-70"
             >
               {isDownloading === 'original' ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Download className="h-4 w-4" />
               )}
-              {isDownloading === 'original' ? 'Downloading...' : 'Download Original · PNG · 3840 × 2160'}
-            </Button>
+              <span className="text-sm">Download Original · PNG · 3840 × 2160</span>
+            </button>
 
             {/* Tags */}
             <div className="mt-6 pt-6 border-t border-border">
-              <h4 className="text-sm font-medium text-muted-foreground mb-3">Tags</h4>
+              <h4 className="text-sm text-muted-foreground mb-3">Tags</h4>
               <div className="flex flex-wrap gap-2">
                 {image.tags.map((tag) => (
                   <button 
                     key={tag}
                     onClick={() => handleTagClick(tag)}
-                    className="px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-sm hover:bg-secondary/80 cursor-pointer transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-sm hover:bg-secondary/80 transition-colors"
                   >
                     #{tag}
                   </button>
