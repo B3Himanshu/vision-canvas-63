@@ -4,13 +4,24 @@ import { Search, ArrowRight, ChevronDown, Sparkles, Zap, Globe } from 'lucide-re
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
-const categories = [
-  { name: 'Nature', icon: '🌳', color: 'bg-category-nature' },
+// Business categories - First row (primary focus)
+const businessCategories = [
   { name: 'Business', icon: '💼', color: 'bg-category-business' },
+  { name: 'Office', icon: '🏢', color: 'bg-category-business' },
+  { name: 'Finance', icon: '💰', color: 'bg-category-business' },
+  { name: 'Marketing', icon: '📈', color: 'bg-category-business' },
+  { name: 'Technology', icon: '💻', color: 'bg-category-abstract' },
+  { name: 'Corporate', icon: '🤝', color: 'bg-category-business' },
+];
+
+// Other categories - Second row
+const otherCategories = [
+  { name: 'Nature', icon: '🌳', color: 'bg-category-nature' },
   { name: 'Travel', icon: '✈️', color: 'bg-category-travel' },
   { name: 'People', icon: '👥', color: 'bg-category-people' },
   { name: 'Abstract', icon: '🎨', color: 'bg-category-abstract' },
   { name: 'Food', icon: '🍔', color: 'bg-category-food' },
+  { name: 'Architecture', icon: '🏛️', color: 'bg-category-travel' },
 ];
 
 // Large floating background cards with real images
@@ -187,23 +198,39 @@ const HeroSection = () => {
             </div>
           </motion.form>
 
-          {/* Category Pills */}
+          {/* Category Pills - Two Rows */}
           <motion.div 
-            className="flex flex-wrap justify-center gap-3 mb-12"
+            className="flex flex-col gap-4 mb-12"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
           >
-            {categories.map((category) => (
-              <button
-                key={category.name}
-                onClick={() => handleCategoryClick(category.name)}
-                className="category-pill"
-              >
-                <span>{category.icon}</span>
-                <span>{category.name}</span>
-              </button>
-            ))}
+            {/* Business Categories - First Row */}
+            <div className="flex flex-wrap justify-center gap-3">
+              {businessCategories.map((category) => (
+                <button
+                  key={category.name}
+                  onClick={() => handleCategoryClick(category.name)}
+                  className="category-pill"
+                >
+                  <span>{category.icon}</span>
+                  <span>{category.name}</span>
+                </button>
+              ))}
+            </div>
+            {/* Other Categories - Second Row */}
+            <div className="flex flex-wrap justify-center gap-3">
+              {otherCategories.map((category) => (
+                <button
+                  key={category.name}
+                  onClick={() => handleCategoryClick(category.name)}
+                  className="category-pill"
+                >
+                  <span>{category.icon}</span>
+                  <span>{category.name}</span>
+                </button>
+              ))}
+            </div>
           </motion.div>
 
           {/* Stats Row */}
