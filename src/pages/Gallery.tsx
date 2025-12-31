@@ -36,18 +36,62 @@ const generateImages = (count: number, startId: number = 0) => {
 
 const Gallery = () => {
   const [searchParams] = useSearchParams();
-  const [images, setImages] = useState(generateImages(40));
-  const [selectedImage, setSelectedImage] = useState<typeof images[0] | null>(null);
+  const categoryParam = searchParams.get('category');
+  const sortParam = searchParams.get('sort');
+  const searchQuery = searchParams.get('q') || '';
+  
+  const [allImages] = useState(() => generateImages(200));
+  const [selectedImage, setSelectedImage] = useState<typeof allImages[0] | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [displayCount, setDisplayCount] = useState(40);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [filters, setFilters] = useState({
-    categories: searchParams.get('category') ? [searchParams.get('category')!] : [],
+    categories: categoryParam ? [categoryParam] : [],
     orientation: 'all',
     colors: [] as string[],
-    sort: searchParams.get('sort') || 'recent',
+    sort: sortParam || 'recent',
   });
+
+  // Update filters when URL params change
+  useEffect(() => {
+    setFilters(prev => ({
+      ...prev,
+      categories: categoryParam ? [categoryParam] : prev.categories,
+      sort: sortParam || prev.sort,
+    }));
+  }, [categoryParam, sortParam]);
+
+  // Filter images based on current filters
+  const filteredImages = allImages.filter(img => {
+    // Category filter
+    if (filters.categories.length > 0 && !filters.categories.includes(img.category)) {
+      return false;
+    }
+    // Search filter
+    if (searchQuery && !img.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    // Orientation filter
+    if (filters.orientation !== 'all') {
+      const isLandscape = img.height < 400;
+      const isPortrait = img.height > 500;
+      if (filters.orientation === 'landscape' && !isLandscape) return false;
+      if (filters.orientation === 'portrait' && !isPortrait) return false;
+      if (filters.orientation === 'square' && (isLandscape || isPortrait)) return false;
+    }
+    return true;
+  });
+
+  // Sort images
+  const sortedImages = [...filteredImages].sort((a, b) => {
+    if (filters.sort === 'popular') return b.downloads - a.downloads;
+    if (filters.sort === 'downloads') return b.downloads - a.downloads;
+    return b.id - a.id; // recent
+  });
+
+  const images = sortedImages.slice(0, displayCount);
+  const hasMore = displayCount < sortedImages.length;
 
   const breakpointColumns = {
     default: 4,
@@ -63,12 +107,10 @@ const Gallery = () => {
     setIsLoading(true);
     
     setTimeout(() => {
-      const newImages = generateImages(20, images.length);
-      setImages(prev => [...prev, ...newImages]);
+      setDisplayCount(prev => Math.min(prev + 20, sortedImages.length));
       setIsLoading(false);
-      if (images.length >= 200) setHasMore(false);
-    }, 1000);
-  }, [isLoading, hasMore, images.length]);
+    }, 500);
+  }, [isLoading, hasMore, sortedImages.length]);
 
   useEffect(() => {
     const handleScroll = () => {

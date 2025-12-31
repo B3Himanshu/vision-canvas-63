@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Download, X, Share2, Expand, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Monitor, Smartphone } from 'lucide-react';
+import { Heart, Download, X, Share2, Expand, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Monitor, Smartphone, Loader2, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
 interface ImageModalProps {
@@ -21,16 +23,50 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
   const [isLiked, setIsLiked] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [downloadType, setDownloadType] = useState<'mobile' | 'desktop' | null>(null);
+  const navigate = useNavigate();
 
   if (!image) return null;
 
-  const handleDownload = (type: 'mobile' | 'desktop' | 'original') => {
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/gallery?image=${image.id}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Link copied to clipboard!');
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  };
+
+  const handleTagClick = (tag: string) => {
+    onClose();
+    navigate(`/gallery?q=${tag}`);
+  };
+
+  const [isDownloading, setIsDownloading] = useState<string | null>(null);
+
+  const handleDownload = async (type: 'mobile' | 'desktop' | 'original') => {
+    setIsDownloading(type);
     setDownloadType(type === 'original' ? null : type);
-    // Simulate download
-    const link = document.createElement('a');
-    link.href = image.url;
-    link.download = `${image.title.toLowerCase().replace(/\s+/g, '-')}-${type}.jpg`;
-    link.click();
+    
+    try {
+      // Fetch the image as a blob
+      const response = await fetch(image.url);
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${image.title.toLowerCase().replace(/\s+/g, '-')}-${type}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+    } finally {
+      setIsDownloading(null);
+    }
   };
 
   return (
@@ -48,7 +84,7 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
             <X className="h-6 w-6" />
           </Button>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={handleShare}>
               <Share2 className="h-5 w-5" />
             </Button>
             <Button 
@@ -152,10 +188,17 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
                 size="lg" 
                 className="gap-3 h-auto py-4 flex-col"
                 onClick={() => handleDownload('mobile')}
+                disabled={isDownloading === 'mobile'}
               >
                 <div className="flex items-center gap-2">
-                  <Smartphone className="h-5 w-5" />
-                  <span className="font-semibold">Download Mobile</span>
+                  {isDownloading === 'mobile' ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Smartphone className="h-5 w-5" />
+                  )}
+                  <span className="font-semibold">
+                    {isDownloading === 'mobile' ? 'Downloading...' : 'Download Mobile'}
+                  </span>
                 </div>
                 <span className="text-xs opacity-80">1080 × 1920 · JPG</span>
               </Button>
@@ -164,10 +207,17 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
                 size="lg" 
                 className="gap-3 h-auto py-4 flex-col"
                 onClick={() => handleDownload('desktop')}
+                disabled={isDownloading === 'desktop'}
               >
                 <div className="flex items-center gap-2">
-                  <Monitor className="h-5 w-5" />
-                  <span className="font-semibold">Download Desktop</span>
+                  {isDownloading === 'desktop' ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Monitor className="h-5 w-5" />
+                  )}
+                  <span className="font-semibold">
+                    {isDownloading === 'desktop' ? 'Downloading...' : 'Download Desktop'}
+                  </span>
                 </div>
                 <span className="text-xs opacity-80">1920 × 1080 · JPG</span>
               </Button>
@@ -177,9 +227,14 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
               variant="outline" 
               className="w-full gap-2"
               onClick={() => handleDownload('original')}
+              disabled={isDownloading === 'original'}
             >
-              <Download className="h-4 w-4" />
-              Download Original · PNG · 3840 × 2160
+              {isDownloading === 'original' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {isDownloading === 'original' ? 'Downloading...' : 'Download Original · PNG · 3840 × 2160'}
             </Button>
 
             {/* Tags */}
@@ -187,12 +242,13 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
               <h4 className="text-sm font-medium text-muted-foreground mb-3">Tags</h4>
               <div className="flex flex-wrap gap-2">
                 {image.tags.map((tag) => (
-                  <span 
+                  <button 
                     key={tag}
+                    onClick={() => handleTagClick(tag)}
                     className="px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-sm hover:bg-secondary/80 cursor-pointer transition-colors"
                   >
                     #{tag}
-                  </span>
+                  </button>
                 ))}
               </div>
             </div>

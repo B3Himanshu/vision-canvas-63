@@ -35,7 +35,7 @@ const HeroSection = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/gallery?search=${encodeURIComponent(searchQuery)}`);
+      navigate(`/gallery?q=${encodeURIComponent(searchQuery)}`);
     } else {
       navigate('/gallery');
     }

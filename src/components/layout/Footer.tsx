@@ -45,19 +45,19 @@ const Footer = () => {
             <h4 className="font-semibold text-foreground mb-4">Account</h4>
             <ul className="space-y-2">
               <li><Link to="/upload" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Upload</Link></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Collections</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Favorites</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Settings</a></li>
+              <li><Link to="/gallery" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Collections</Link></li>
+              <li><Link to="/gallery" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Favorites</Link></li>
+              <li><Link to="/" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Settings</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-semibold text-foreground mb-4">Legal</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Terms of Service</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Privacy Policy</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors text-sm">License</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Contact</a></li>
+              <li><Link to="/" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Terms of Service</Link></li>
+              <li><Link to="/" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Privacy Policy</Link></li>
+              <li><Link to="/" className="text-muted-foreground hover:text-foreground transition-colors text-sm">License</Link></li>
+              <li><Link to="/" className="text-muted-foreground hover:text-foreground transition-colors text-sm">Contact</Link></li>
             </ul>
           </div>
         </div>

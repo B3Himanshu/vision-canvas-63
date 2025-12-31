@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -57,8 +58,20 @@ const sortOptions = [
 ];
 
 const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSidebarProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [expandedSections, setExpandedSections] = useState<string[]>(['categories', 'orientation', 'colors', 'sort']);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/gallery?q=${encodeURIComponent(searchQuery)}`);
+    } else {
+      navigate('/gallery');
+    }
+    onClose();
+  };
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 
@@ -91,7 +104,7 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
   const SidebarContent = () => (
     <div className="h-full flex flex-col">
       {/* Search */}
-      <div className="p-4 border-b border-border">
+      <form onSubmit={handleSearch} className="p-4 border-b border-border">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
@@ -102,7 +115,7 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
             className="w-full h-10 pl-10 pr-4 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
-      </div>
+      </form>
 
       {/* Filters */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
