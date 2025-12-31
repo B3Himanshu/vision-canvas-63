@@ -238,34 +238,28 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
               </div>
             </div>
 
-            {/* Download Section - Format Based */}
+            {/* Download Section - 3 Buttons */}
             <div className="space-y-4">
               {/* Section Title */}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Download className="h-4 w-4" />
-                <span>Download Formats</span>
+              <div className="text-sm text-muted-foreground">
+                Download Formats
               </div>
 
-              {/* Main Format Downloads - 16:9 and 9:16 */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Three Download Buttons */}
+              <div className="grid grid-cols-3 gap-3">
                 {/* 16:9 Landscape */}
                 <button 
                   onClick={() => handleDownload('16x9', '1920x1080')}
                   disabled={isDownloading === '16x9'}
                   className="relative overflow-hidden rounded-xl p-4 text-center transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70"
                   style={{
-                    background: 'linear-gradient(135deg, hsl(199, 89%, 48%) 0%, hsl(262, 83%, 58%) 50%, hsl(330, 81%, 60%) 100%)',
+                    background: 'linear-gradient(135deg, hsl(199, 89%, 48%) 0%, hsl(262, 83%, 58%) 100%)',
                   }}
                 >
-                  <div className="flex items-center justify-center gap-2 text-white font-semibold mb-1">
-                    {isDownloading === '16x9' ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Monitor className="h-4 w-4" />
-                    )}
-                    16:9 Landscape
+                  <div className="text-white font-semibold mb-1">
+                    {isDownloading === '16x9' ? 'Downloading...' : '16:9'}
                   </div>
-                  <span className="text-white/70 text-xs">1920 × 1080 · {imageType === 'illustration' ? 'SVG' : 'JPG'}</span>
+                  <span className="text-white/70 text-xs">1920 × 1080</span>
                 </button>
 
                 {/* 9:16 Portrait */}
@@ -274,85 +268,30 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
                   disabled={isDownloading === '9x16'}
                   className="relative overflow-hidden rounded-xl p-4 text-center transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70"
                   style={{
-                    background: 'linear-gradient(135deg, hsl(262, 83%, 58%) 0%, hsl(199, 89%, 48%) 50%, hsl(330, 81%, 60%) 100%)',
+                    background: 'linear-gradient(135deg, hsl(262, 83%, 58%) 0%, hsl(330, 81%, 60%) 100%)',
                   }}
                 >
-                  <div className="flex items-center justify-center gap-2 text-white font-semibold mb-1">
-                    {isDownloading === '9x16' ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Smartphone className="h-4 w-4" />
-                    )}
-                    9:16 Portrait
+                  <div className="text-white font-semibold mb-1">
+                    {isDownloading === '9x16' ? 'Downloading...' : '9:16'}
                   </div>
-                  <span className="text-white/70 text-xs">1080 × 1920 · {imageType === 'illustration' ? 'SVG' : 'JPG'}</span>
+                  <span className="text-white/70 text-xs">1080 × 1920</span>
+                </button>
+
+                {/* Original */}
+                <button 
+                  onClick={() => handleDownload('original', 'original')}
+                  disabled={isDownloading === 'original'}
+                  className="relative overflow-hidden rounded-xl p-4 text-center transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(330, 81%, 60%) 0%, hsl(199, 89%, 48%) 100%)',
+                  }}
+                >
+                  <div className="text-white font-semibold mb-1">
+                    {isDownloading === 'original' ? 'Downloading...' : 'Original'}
+                  </div>
+                  <span className="text-white/70 text-xs">Full Resolution</span>
                 </button>
               </div>
-
-              {/* Illustration/Vector specific formats */}
-              {imageType === 'illustration' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => handleDownload('vector-16x9', '1920x1080')}
-                    disabled={isDownloading === 'vector-16x9'}
-                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-purple-500/30 bg-purple-500/10 text-foreground hover:bg-purple-500/20 transition-all disabled:opacity-70"
-                  >
-                    {isDownloading === 'vector-16x9' ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Palette className="h-4 w-4 text-purple-500" />
-                    )}
-                    <span className="text-sm font-medium">Vector 16:9</span>
-                  </button>
-                  <button 
-                    onClick={() => handleDownload('vector-9x16', '1080x1920')}
-                    disabled={isDownloading === 'vector-9x16'}
-                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-purple-500/30 bg-purple-500/10 text-foreground hover:bg-purple-500/20 transition-all disabled:opacity-70"
-                  >
-                    {isDownloading === 'vector-9x16' ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Palette className="h-4 w-4 text-purple-500" />
-                    )}
-                    <span className="text-sm font-medium">Vector 9:16</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Icon specific formats */}
-              {imageType === 'icon' && (
-                <div className="grid grid-cols-3 gap-3">
-                  {['64x64', '128x128', '256x256'].map((size) => (
-                    <button 
-                      key={size}
-                      onClick={() => handleDownload(`icon-${size}`, size)}
-                      disabled={isDownloading === `icon-${size}`}
-                      className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-blue-500/30 bg-blue-500/10 text-foreground hover:bg-blue-500/20 transition-all disabled:opacity-70"
-                    >
-                      {isDownloading === `icon-${size}` ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Shapes className="h-4 w-4 text-blue-500" />
-                      )}
-                      <span className="text-sm font-medium">{size}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Original Download */}
-              <button 
-                onClick={() => handleDownload('original', 'original')}
-                disabled={isDownloading === 'original'}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all disabled:opacity-70"
-              >
-                {isDownloading === 'original' ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                <span className="text-sm">Download Original · {imageType === 'illustration' ? 'SVG' : imageType === 'icon' ? 'PNG' : 'PNG'} · Full Resolution</span>
-              </button>
             </div>
 
             {/* Tags */}
