@@ -21,6 +21,7 @@ const generateImages = (count: number, startId: number = 0) => {
   const authors = ['johndoe', 'janecreative', 'alexphoto', 'samdesign', 'mikeart'];
   const categories = ['nature', 'business', 'travel', 'people', 'abstract', 'food'];
   const tags = ['landscape', 'portrait', 'minimal', 'colorful', 'dark', 'bright', 'moody'];
+  const types: Array<'photo' | 'illustration' | 'icon'> = ['photo', 'photo', 'photo', 'illustration', 'icon'];
 
   return Array.from({ length: count }, (_, i) => ({
     id: startId + i,
@@ -31,6 +32,7 @@ const generateImages = (count: number, startId: number = 0) => {
     height: 300 + Math.floor(Math.random() * 400),
     category: categories[Math.floor(Math.random() * categories.length)],
     tags: tags.slice(0, Math.floor(Math.random() * 4) + 2),
+    type: types[Math.floor(Math.random() * types.length)],
   }));
 };
 
