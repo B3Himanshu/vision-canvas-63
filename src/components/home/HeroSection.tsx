@@ -13,19 +13,19 @@ const categories = [
   { name: 'Food', icon: '🍔', color: 'bg-category-food' },
 ];
 
-// Large floating background cards positioned around edges
+// Large floating background cards with real images
 const backgroundCards = [
   // Left side cards
-  { id: 1, left: '3%', top: '15%', width: 180, height: 240, rotate: -12, delay: 0 },
-  { id: 2, left: '8%', top: '55%', width: 140, height: 200, rotate: 8, delay: 0.3 },
-  { id: 3, left: '15%', top: '75%', width: 120, height: 160, rotate: -5, delay: 0.6 },
+  { id: 1, left: '2%', top: '12%', width: 200, height: 280, rotate: -12, delay: 0, seed: 101 },
+  { id: 2, left: '5%', top: '55%', width: 160, height: 220, rotate: 8, delay: 0.3, seed: 205 },
+  { id: 3, left: '12%', top: '78%', width: 140, height: 180, rotate: -5, delay: 0.6, seed: 303 },
   // Right side cards
-  { id: 4, right: '3%', top: '20%', width: 160, height: 220, rotate: 10, delay: 0.2 },
-  { id: 5, right: '10%', top: '50%', width: 180, height: 260, rotate: -8, delay: 0.5 },
-  { id: 6, right: '5%', top: '80%', width: 130, height: 180, rotate: 15, delay: 0.8 },
-  // Top center cards (smaller, more subtle)
-  { id: 7, left: '35%', top: '5%', width: 100, height: 140, rotate: -18, delay: 0.4 },
-  { id: 8, right: '30%', top: '8%', width: 90, height: 120, rotate: 12, delay: 0.7 },
+  { id: 4, right: '2%', top: '18%', width: 180, height: 250, rotate: 10, delay: 0.2, seed: 404 },
+  { id: 5, right: '8%', top: '52%', width: 200, height: 280, rotate: -8, delay: 0.5, seed: 505 },
+  { id: 6, right: '4%', top: '82%', width: 150, height: 200, rotate: 15, delay: 0.8, seed: 606 },
+  // Top cards
+  { id: 7, left: '30%', top: '3%', width: 120, height: 160, rotate: -18, delay: 0.4, seed: 707 },
+  { id: 8, right: '28%', top: '5%', width: 110, height: 150, rotate: 12, delay: 0.7, seed: 808 },
 ];
 
 const HeroSection = () => {
@@ -50,7 +50,7 @@ const HeroSection = () => {
       {/* Animated gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background pointer-events-none" />
       
-      {/* Large floating background cards */}
+      {/* Large floating background cards with images */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {backgroundCards.map((card) => (
           <motion.div
@@ -67,28 +67,32 @@ const HeroSection = () => {
             animate={{ 
               opacity: 1, 
               scale: 1,
-              y: [0, -10, 0],
+              y: [0, -15, 0],
             }}
             transition={{
               delay: card.delay,
-              duration: 5 + card.id * 0.5,
+              duration: 6 + card.id * 0.5,
               repeat: Infinity,
               ease: "easeInOut"
             }}
           >
             <div 
-              className="w-full h-full rounded-3xl overflow-hidden transform-gpu"
+              className="w-full h-full rounded-2xl overflow-hidden transform-gpu shadow-2xl"
               style={{ 
                 transform: `rotate(${card.rotate}deg)`,
-                background: 'linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--muted)) 100%)',
-                border: '1px solid hsl(var(--border))',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
               }}
             >
-              {/* Inner gradient overlay for depth */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
-              {/* Subtle shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent" />
+              {/* Image */}
+              <img 
+                src={`https://picsum.photos/seed/${card.seed}/${card.width * 2}/${card.height * 2}`}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+              {/* Dark overlay for depth */}
+              <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/20 to-black/50" />
+              {/* Border glow */}
+              <div className="absolute inset-0 rounded-2xl border border-white/10" />
             </div>
           </motion.div>
         ))}
