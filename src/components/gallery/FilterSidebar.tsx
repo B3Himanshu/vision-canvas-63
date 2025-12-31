@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, X, ChevronDown } from 'lucide-react';
+import { Search, X, ChevronDown, SlidersHorizontal, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 
 interface FilterSidebarProps {
   isOpen: boolean;
@@ -29,30 +28,30 @@ const categories = [
 ];
 
 const orientations = [
-  { id: 'all', name: 'All', icon: '⬜' },
-  { id: 'landscape', name: 'Landscape', icon: '🖼️' },
-  { id: 'portrait', name: 'Portrait', icon: '📱' },
-  { id: 'square', name: 'Square', icon: '⬜' },
+  { id: 'all', name: 'All Orientations' },
+  { id: 'landscape', name: 'Landscape' },
+  { id: 'portrait', name: 'Portrait' },
+  { id: 'square', name: 'Square' },
 ];
 
 const colors = [
-  { id: 'red', color: 'bg-red-500' },
-  { id: 'orange', color: 'bg-orange-500' },
-  { id: 'yellow', color: 'bg-yellow-500' },
-  { id: 'green', color: 'bg-green-500' },
-  { id: 'blue', color: 'bg-blue-500' },
-  { id: 'purple', color: 'bg-purple-500' },
-  { id: 'pink', color: 'bg-pink-500' },
-  { id: 'brown', color: 'bg-amber-700' },
-  { id: 'black', color: 'bg-gray-900' },
-  { id: 'white', color: 'bg-white' },
-  { id: 'gray', color: 'bg-gray-500' },
-  { id: 'teal', color: 'bg-teal-500' },
+  { id: 'red', color: '#EF4444', name: 'Red' },
+  { id: 'orange', color: '#F97316', name: 'Orange' },
+  { id: 'yellow', color: '#EAB308', name: 'Yellow' },
+  { id: 'green', color: '#22C55E', name: 'Green' },
+  { id: 'blue', color: '#3B82F6', name: 'Blue' },
+  { id: 'purple', color: '#A855F7', name: 'Purple' },
+  { id: 'pink', color: '#EC4899', name: 'Pink' },
+  { id: 'brown', color: '#92400E', name: 'Brown' },
+  { id: 'black', color: '#171717', name: 'Black' },
+  { id: 'white', color: '#FAFAFA', name: 'White' },
+  { id: 'gray', color: '#6B7280', name: 'Gray' },
+  { id: 'teal', color: '#14B8A6', name: 'Teal' },
 ];
 
 const sortOptions = [
-  { id: 'recent', name: 'Recent' },
-  { id: 'popular', name: 'Popular' },
+  { id: 'recent', name: 'Most Recent' },
+  { id: 'popular', name: 'Most Popular' },
   { id: 'downloads', name: 'Most Downloaded' },
   { id: 'random', name: 'Random' },
 ];
@@ -61,7 +60,7 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-  const [expandedSections, setExpandedSections] = useState<string[]>(['categories', 'orientation', 'colors', 'sort']);
+  const [expandedSections, setExpandedSections] = useState<string[]>(['categories', 'orientation', 'colors']);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,30 +102,49 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
 
   const SidebarContent = () => (
     <div className="h-full flex flex-col">
-      {/* Search */}
-      <form onSubmit={handleSearch} className="p-4 border-b border-border">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search images..."
-            className="w-full h-10 pl-10 pr-4 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
+      {/* Header */}
+      <div className="p-5 border-b border-border">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-xl bg-primary/10">
+            <SlidersHorizontal className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">Filters</h3>
+            <p className="text-xs text-muted-foreground">Refine your search</p>
+          </div>
         </div>
-      </form>
+        {/* Search */}
+        <form onSubmit={handleSearch}>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search images..."
+              className="w-full h-11 pl-10 pr-4 bg-secondary/50 rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:bg-secondary transition-all"
+            />
+          </div>
+        </form>
+      </div>
 
       {/* Filters */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto">
         {/* Categories */}
-        <div>
+        <div className="border-b border-border">
           <button
             onClick={() => toggleSection('categories')}
-            className="flex items-center justify-between w-full py-2 text-sm font-semibold text-foreground"
+            className="flex items-center justify-between w-full p-5 text-sm font-semibold text-foreground hover:bg-secondary/30 transition-colors"
           >
-            Categories
-            <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.includes('categories') ? 'rotate-180' : ''}`} />
+            <span className="flex items-center gap-2">
+              Categories
+              {filters.categories.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
+                  {filters.categories.length}
+                </span>
+              )}
+            </span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedSections.includes('categories') ? 'rotate-180' : ''}`} />
           </button>
           <AnimatePresence>
             {expandedSections.includes('categories') && (
@@ -134,35 +152,41 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="space-y-1 overflow-hidden"
+                className="overflow-hidden"
               >
-                {categories.map((category) => (
-                  <label
-                    key={category.id}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary cursor-pointer transition-colors"
-                  >
-                    <Checkbox
-                      checked={filters.categories.includes(category.id)}
-                      onCheckedChange={() => toggleCategory(category.id)}
-                    />
-                    <span className="text-lg">{category.icon}</span>
-                    <span className="flex-1 text-sm text-foreground">{category.name}</span>
-                    <span className="text-xs text-muted-foreground">{category.count}</span>
-                  </label>
-                ))}
+                <div className="px-5 pb-5 space-y-1">
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => toggleCategory(category.id)}
+                      className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all ${
+                        filters.categories.includes(category.id)
+                          ? 'bg-primary/10 text-primary'
+                          : 'hover:bg-secondary/50 text-foreground'
+                      }`}
+                    >
+                      <span className="text-lg">{category.icon}</span>
+                      <span className="flex-1 text-sm text-left">{category.name}</span>
+                      <span className="text-xs text-muted-foreground">{category.count}</span>
+                      {filters.categories.includes(category.id) && (
+                        <Check className="h-4 w-4 text-primary" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
         {/* Orientation */}
-        <div>
+        <div className="border-b border-border">
           <button
             onClick={() => toggleSection('orientation')}
-            className="flex items-center justify-between w-full py-2 text-sm font-semibold text-foreground"
+            className="flex items-center justify-between w-full p-5 text-sm font-semibold text-foreground hover:bg-secondary/30 transition-colors"
           >
-            Orientation
-            <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.includes('orientation') ? 'rotate-180' : ''}`} />
+            <span>Orientation</span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedSections.includes('orientation') ? 'rotate-180' : ''}`} />
           </button>
           <AnimatePresence>
             {expandedSections.includes('orientation') && (
@@ -170,37 +194,43 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="space-y-1 overflow-hidden"
+                className="overflow-hidden"
               >
-                {orientations.map((orientation) => (
-                  <label
-                    key={orientation.id}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary cursor-pointer transition-colors"
-                  >
-                    <input
-                      type="radio"
-                      name="orientation"
-                      checked={filters.orientation === orientation.id}
-                      onChange={() => onFilterChange({ ...filters, orientation: orientation.id })}
-                      className="w-4 h-4 text-primary bg-secondary border-border focus:ring-primary"
-                    />
-                    <span className="text-lg">{orientation.icon}</span>
-                    <span className="text-sm text-foreground">{orientation.name}</span>
-                  </label>
-                ))}
+                <div className="px-5 pb-5 grid grid-cols-2 gap-2">
+                  {orientations.map((orientation) => (
+                    <button
+                      key={orientation.id}
+                      onClick={() => onFilterChange({ ...filters, orientation: orientation.id })}
+                      className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        filters.orientation === orientation.id
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary/50 text-foreground hover:bg-secondary'
+                      }`}
+                    >
+                      {orientation.name}
+                    </button>
+                  ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
         {/* Colors */}
-        <div>
+        <div className="border-b border-border">
           <button
             onClick={() => toggleSection('colors')}
-            className="flex items-center justify-between w-full py-2 text-sm font-semibold text-foreground"
+            className="flex items-center justify-between w-full p-5 text-sm font-semibold text-foreground hover:bg-secondary/30 transition-colors"
           >
-            Colors
-            <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.includes('colors') ? 'rotate-180' : ''}`} />
+            <span className="flex items-center gap-2">
+              Colors
+              {filters.colors.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
+                  {filters.colors.length}
+                </span>
+              )}
+            </span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedSections.includes('colors') ? 'rotate-180' : ''}`} />
           </button>
           <AnimatePresence>
             {expandedSections.includes('colors') && (
@@ -208,19 +238,29 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="grid grid-cols-6 gap-2 pt-2 overflow-hidden"
+                className="overflow-hidden"
               >
-                {colors.map((color) => (
-                  <button
-                    key={color.id}
-                    onClick={() => toggleColor(color.id)}
-                    className={`w-8 h-8 rounded-full ${color.color} border-2 transition-all ${
-                      filters.colors.includes(color.id)
-                        ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background'
-                        : 'border-transparent hover:scale-110'
-                    }`}
-                  />
-                ))}
+                <div className="px-5 pb-5 grid grid-cols-6 gap-3">
+                  {colors.map((color) => (
+                    <button
+                      key={color.id}
+                      onClick={() => toggleColor(color.id)}
+                      title={color.name}
+                      className={`relative w-9 h-9 rounded-full transition-all hover:scale-110 ${
+                        filters.colors.includes(color.id)
+                          ? 'ring-2 ring-primary ring-offset-2 ring-offset-card scale-110'
+                          : ''
+                      }`}
+                      style={{ backgroundColor: color.color }}
+                    >
+                      {filters.colors.includes(color.id) && (
+                        <Check className={`absolute inset-0 m-auto h-4 w-4 ${
+                          color.id === 'white' || color.id === 'yellow' ? 'text-gray-800' : 'text-white'
+                        }`} />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -230,10 +270,10 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
         <div>
           <button
             onClick={() => toggleSection('sort')}
-            className="flex items-center justify-between w-full py-2 text-sm font-semibold text-foreground"
+            className="flex items-center justify-between w-full p-5 text-sm font-semibold text-foreground hover:bg-secondary/30 transition-colors"
           >
-            Sort By
-            <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.includes('sort') ? 'rotate-180' : ''}`} />
+            <span>Sort By</span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedSections.includes('sort') ? 'rotate-180' : ''}`} />
           </button>
           <AnimatePresence>
             {expandedSections.includes('sort') && (
@@ -241,23 +281,26 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="space-y-1 overflow-hidden"
+                className="overflow-hidden"
               >
-                {sortOptions.map((option) => (
-                  <label
-                    key={option.id}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary cursor-pointer transition-colors"
-                  >
-                    <input
-                      type="radio"
-                      name="sort"
-                      checked={filters.sort === option.id}
-                      onChange={() => onFilterChange({ ...filters, sort: option.id })}
-                      className="w-4 h-4 text-primary bg-secondary border-border focus:ring-primary"
-                    />
-                    <span className="text-sm text-foreground">{option.name}</span>
-                  </label>
-                ))}
+                <div className="px-5 pb-5 space-y-1">
+                  {sortOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => onFilterChange({ ...filters, sort: option.id })}
+                      className={`flex items-center justify-between w-full p-3 rounded-xl text-sm transition-all ${
+                        filters.sort === option.id
+                          ? 'bg-primary/10 text-primary'
+                          : 'hover:bg-secondary/50 text-foreground'
+                      }`}
+                    >
+                      <span>{option.name}</span>
+                      {filters.sort === option.id && (
+                        <Check className="h-4 w-4 text-primary" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -266,12 +309,13 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
 
       {/* Clear Filters */}
       {hasActiveFilters && (
-        <div className="p-4 border-t border-border">
+        <div className="p-5 border-t border-border">
           <Button 
             variant="outline" 
-            className="w-full text-destructive border-destructive/50 hover:bg-destructive/10"
+            className="w-full gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50"
             onClick={clearFilters}
           >
+            <X className="h-4 w-4" />
             Clear All Filters
           </Button>
         </div>
@@ -282,7 +326,7 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-72 flex-shrink-0 bg-card border-r border-border h-[calc(100vh-80px)] sticky top-20">
+      <aside className="hidden lg:block w-80 flex-shrink-0 bg-card/50 backdrop-blur-sm border-r border-border h-[calc(100vh-80px)] sticky top-20 overflow-hidden">
         <SidebarContent />
       </aside>
 
@@ -294,26 +338,28 @@ const FilterSidebar = ({ isOpen, onClose, filters, onFilterChange }: FilterSideb
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="lg:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+              className="lg:hidden fixed inset-0 bg-background/80 backdrop-blur-md z-40"
               onClick={onClose}
             />
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="lg:hidden fixed bottom-0 left-0 right-0 bg-card rounded-t-3xl z-50 max-h-[80vh] overflow-hidden"
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="lg:hidden fixed bottom-0 left-0 right-0 bg-card rounded-t-3xl z-50 max-h-[85vh] overflow-hidden shadow-2xl"
             >
               <div className="flex items-center justify-between p-4 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <SlidersHorizontal className="h-5 w-5 text-primary" />
+                  </div>
                   <span className="font-semibold text-foreground">Filters</span>
                 </div>
-                <Button variant="ghost" size="icon" onClick={onClose}>
+                <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl">
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-              <div className="max-h-[calc(80vh-60px)] overflow-y-auto">
+              <div className="max-h-[calc(85vh-60px)] overflow-y-auto">
                 <SidebarContent />
               </div>
             </motion.div>
