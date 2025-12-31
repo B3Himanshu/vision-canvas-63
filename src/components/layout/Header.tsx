@@ -24,17 +24,17 @@ const Header = () => {
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isHome ? 'bg-transparent' : 'glass'}`}>
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 md:h-20">
+        <div className="flex items-center h-16 md:h-20 gap-8">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 shrink-0">
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
               <span className="text-primary-foreground font-bold text-xl">P</span>
             </div>
             <span className="text-xl font-bold text-foreground hidden sm:block">PixelVault</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          {/* Desktop Navigation - Centered */}
+          <nav className="hidden lg:flex items-center gap-8 flex-1">
             <Link 
               to="/gallery" 
               className="text-muted-foreground hover:text-foreground transition-colors font-medium"
@@ -55,37 +55,40 @@ const Header = () => {
             </Link>
           </nav>
 
-          {/* Desktop Actions */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* Desktop Actions - Right aligned */}
+          <div className="hidden md:flex items-center gap-4 ml-auto">
             {/* Search Bar */}
             <form onSubmit={handleSearch} className="flex items-center">
-              <div className="relative flex items-center">
-                <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
+              <div className="relative flex items-center bg-muted/30 rounded-full border border-border/40 overflow-hidden">
+                <Search className="absolute left-4 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
                   type="text"
                   placeholder="Search for images..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 w-64 h-10 bg-background/50 border-border/50 rounded-l-full rounded-r-none focus-visible:ring-primary"
+                  className="pl-11 pr-2 w-48 lg:w-56 h-10 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/70"
                 />
                 <Button 
                   type="submit" 
                   variant="gradient" 
-                  className="h-10 rounded-l-none rounded-r-full px-6"
+                  size="sm"
+                  className="h-8 rounded-full px-5 mr-1"
                 >
                   Search
                 </Button>
               </div>
             </form>
+            
             <ThemeToggle />
-            <Button variant="gradient" className="gap-2">
+            
+            <Button variant="gradient" className="gap-2 rounded-full px-5">
               <User className="h-4 w-4" />
               Sign In
             </Button>
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="flex items-center gap-2 md:hidden ml-auto">
             <ThemeToggle />
             <Button 
               variant="ghost" 
