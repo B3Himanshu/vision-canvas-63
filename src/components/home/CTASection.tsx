@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Upload, ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
@@ -47,31 +47,23 @@ const CTASection = () => {
           </motion.div>
 
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-6">
-            Share Your Creative Vision
+            Discover Amazing Imagery
           </h2>
           <p className="text-lg md:text-xl text-foreground/80 mb-10 max-w-2xl mx-auto">
-            Upload your images and inspire creators worldwide. 
-            Be part of a community that believes in free, high-quality imagery for everyone.
+            Explore a curated collection of high-quality images from creators worldwide. 
+            Be part of a community that believes in free, beautiful imagery for everyone.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/upload">
-              <Button variant="hero" size="xl" className="gap-3">
-                <Upload className="h-5 w-5" />
-                Start Uploading Now
-              </Button>
-            </Link>
-            <Link to="/gallery">
-              <Button 
-                variant="glass" 
-                size="xl" 
-                className="gap-2 bg-foreground/10 border-foreground/20 hover:bg-foreground/20"
-              >
-                Explore Gallery
-                <ArrowRight className="h-5 w-5" />
-              </Button>
-            </Link>
-          </div>
+          <Link to="/gallery">
+            <Button 
+              variant="hero" 
+              size="xl" 
+              className="gap-2"
+            >
+              Explore Gallery
+              <ArrowRight className="h-5 w-5" />
+            </Button>
+          </Link>
         </motion.div>
       </div>
     </section>
