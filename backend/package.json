@@ -1,0 +1,27 @@
+{
+  "name": "pixelvault-backend",
+  "version": "1.0.0",
+  "description": "Backend utilities and database connection for PixelVault",
+  "main": "lib/db.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "export:custom": "tsx scripts/export-custom-tables.ts",
+    "export:all": "tsx scripts/export-to-excel.ts",
+    "migrate": "tsx scripts/run-migrations.ts",
+    "backup": "tsx scripts/backup-database.ts",
+    "upload:images": "tsx scripts/upload-images.ts"
+  },
+  "dependencies": {
+    "blurhash": "^2.0.5",
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^13.6.0",
+    "pg": "^8.11.3",
+    "sharp": "^0.34.5",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.10.9",
+    "tsx": "^4.7.0",
+    "typescript": "^5.8.3"
+  }
+}
