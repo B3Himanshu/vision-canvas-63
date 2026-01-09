@@ -35,16 +35,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/?error=invalid_state', request.url));
     }
 
-    // Decode state to get return URL and pending download
+    // Decode state to get return URL and pending download/favorite
     let returnUrl = '/';
     let pendingDownload: string | null = null;
+    let pendingFavorite: string | null = null;
     try {
       const stateData = JSON.parse(Buffer.from(state, 'base64url').toString());
       returnUrl = stateData.returnUrl || '/';
       pendingDownload = stateData.pendingDownload || null;
+      pendingFavorite = stateData.pendingFavorite || null;
+      
+      // Debug logging in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[OAuth Callback] Decoded returnUrl:', returnUrl);
+        console.log('[OAuth Callback] Decoded pendingDownload:', pendingDownload);
+        console.log('[OAuth Callback] Decoded pendingFavorite:', pendingFavorite);
+      }
     } catch (e) {
       // If state parsing fails, use default return URL
-      console.warn('Failed to parse OAuth state, using default return URL');
+      console.warn('Failed to parse OAuth state, using default return URL', e);
     }
 
     if (!code) {
@@ -150,10 +159,29 @@ export async function GET(request: NextRequest) {
     const token = generateSessionToken(String(user.id));
 
     // Build redirect URL with pending download info if available
-    const redirectUrl = new URL(returnUrl, request.url);
+    // Handle both absolute and relative URLs
+    let redirectUrl: URL;
+    if (returnUrl.startsWith('http://') || returnUrl.startsWith('https://')) {
+      redirectUrl = new URL(returnUrl);
+    } else {
+      // Relative URL - construct from request origin
+      const baseUrl = new URL(request.url);
+      redirectUrl = new URL(returnUrl, `${baseUrl.protocol}//${baseUrl.host}`);
+    }
+    
     if (pendingDownload) {
       redirectUrl.searchParams.set('download', pendingDownload);
       redirectUrl.searchParams.set('auth', 'success');
+    } else if (pendingFavorite) {
+      // For pending favorite, add auth=success to indicate OAuth return for favoriting
+      redirectUrl.searchParams.set('auth', 'success');
+      // The image ID is already in the returnUrl path for /image/[id] or as a query param for /gallery
+      // No need to add a separate 'favorite' param, just 'auth=success' is enough to trigger the useEffect
+    }
+    
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[OAuth Callback] Final redirect URL:', redirectUrl.toString());
     }
 
     // Clear OAuth state cookie

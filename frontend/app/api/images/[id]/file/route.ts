@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getImageFile } from '@/backend/lib/images';
+import { decodeId } from '@/backend/lib/hashids';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +9,7 @@ export const dynamic = 'force-dynamic';
  * Returns full resolution image binary data
  * Public endpoint - anyone can view HD images
  * (Download functionality still requires authentication)
+ * Accepts both hash IDs (e.g., "a3xK9m") and numeric IDs for backward compatibility
  */
 export async function GET(
   request: NextRequest,
@@ -17,9 +19,18 @@ export async function GET(
     // No authentication required for viewing images
     // Downloads are handled separately and require authentication
 
-    const id = parseInt(params.id, 10);
+    // Try to decode hash ID first, fallback to numeric ID for backward compatibility
+    let id: number | null = decodeId(params.id);
     
-    if (isNaN(id) || id <= 0) {
+    // If hash decoding failed, try parsing as numeric ID (backward compatibility)
+    if (id === null) {
+      const numericId = parseInt(params.id, 10);
+      if (!isNaN(numericId) && numericId > 0) {
+        id = numericId;
+      }
+    }
+    
+    if (!id || id <= 0) {
       return new NextResponse('Invalid image ID', { status: 400 });
     }
 
@@ -46,13 +57,14 @@ export async function GET(
       return new NextResponse(null, { status: 304 }); // Not Modified
     }
 
-    // Return binary image data with proper headers (session cache with ETag)
+    // Return binary image data with proper headers (aggressive browser cache)
     return new NextResponse(imageBuffer, {
       status: 200,
       headers: {
         'Content-Type': result.mimeType || 'image/webp', // WebP format
         'Content-Length': imageBuffer.length.toString(),
-        'Cache-Control': 'no-cache, must-revalidate', // Browser caches but validates with server
+        // Aggressive caching: 1 hour public cache, browser can cache for 1 hour without revalidation
+        'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400', // 1 hour cache, 24h stale-while-revalidate
         'ETag': `"${etag}"`, // ETag for cache validation
         'Content-Disposition': `inline; filename="image-${id}.webp"`,
       },

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import Masonry from 'react-masonry-css';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Filter, Loader2, ArrowUp, ArrowDown, Sparkles, TrendingUp, Clock, Grid3X3, LayoutGrid, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Loader2, ArrowUp, ArrowDown, Sparkles, TrendingUp, Clock, Grid3X3, LayoutGrid, Search, SlidersHorizontal, X } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ImageCard from '@/components/gallery/ImageCard';
@@ -13,8 +14,15 @@ import FilterSidebar from '@/components/gallery/FilterSidebar';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Lazy load ImageModal for code splitting
-const ImageModal = lazy(() => import('@/components/gallery/ImageModal'));
+// Dynamically load ImageModal with SSR disabled to prevent React context issues
+const ImageModal = dynamic(() => import('@/components/gallery/ImageModal'), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  ),
+});
 
 const sortTabs = [
   { id: 'recent', label: 'Recent', icon: Clock },
@@ -58,6 +66,10 @@ function GalleryContent() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [viewMode, setViewMode] = useState<'masonry' | 'grid'>('masonry');
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [isLoadingOAuthImage, setIsLoadingOAuthImage] = useState(false); // Track OAuth return image loading
+  
+  // Memoize images array to prevent unnecessary re-renders of ImageCard components
+  const memoizedImages = useMemo(() => loadedImages, [loadedImages]);
   const INITIAL_LIMIT = 30;
   const PAGE_SIZE = 50;
   const [filters, setFilters] = useState({
@@ -91,8 +103,17 @@ function GalleryContent() {
 
   const { limit, offset } = getLimitAndOffset();
 
-  // Fetch images using React Query
-  const { data, isLoading, error, refetch } = useQuery({
+  // Fetch images using React Query with session-level caching
+  const { data, isLoading, error, refetch } = useQuery<{
+    success: boolean;
+    data: any[];
+    pagination: {
+      total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    };
+  }>({
     queryKey: ['images', filters.categories[0], searchQuery, filters.orientation, filters.sort, limit, offset],
     queryFn: () => fetchImages({
       category: filters.categories[0],
@@ -102,9 +123,17 @@ function GalleryContent() {
       limit,
       offset,
     }),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
-    enabled: true, // Always enabled
+    // Session-level cache: 30 minutes stale time (inherits from defaultOptions)
+    // This means data won't be refetched for 30 minutes after first load
+    staleTime: 30 * 60 * 1000, // 30 minutes - data stays fresh
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours - keep in cache for entire session
+    // Don't refetch when component remounts (e.g., when modal closes)
+    refetchOnMount: false,
+    // Don't refetch on window focus
+    refetchOnWindowFocus: false,
+    // Don't refetch on reconnect
+    refetchOnReconnect: false,
+    enabled: true, // Always enabled, but we'll show loading overlay for OAuth return
   });
 
   // Update loaded images when new data arrives
@@ -120,10 +149,148 @@ function GalleryContent() {
     }
   }, [data, currentPage]);
 
-  const images = loadedImages;
+  // Use memoized images to prevent re-renders when modal state changes
+  const images = memoizedImages;
   const hasMore = data?.pagination?.hasMore || false;
   const totalImages = data?.pagination?.total || 0;
   const isInitialLoading = isLoading && currentPage === 0 && loadedImages.length === 0;
+
+  // Fetch a single image by ID or hashId (supports both)
+  const fetchImageById = useCallback(async (idOrHash: number | string) => {
+    try {
+      const response = await fetch(`/api/images/${idOrHash}`);
+      if (!response.ok) return null;
+      const result = await response.json();
+      return result.success ? result.data : null;
+    } catch (error) {
+      console.error('Error fetching image by ID:', error);
+      return null;
+    }
+  }, []);
+
+  // Open image modal if image ID or hashId is in URL params
+  // This handles both direct navigation and OAuth return with image context
+  // Supports both hashId (e.g., "a3xK9m") and numeric ID (e.g., "73") for backward compatibility
+  useEffect(() => {
+    const imageIdParam = searchParams.get('image');
+    if (!imageIdParam) {
+      setIsLoadingOAuthImage(false);
+      return;
+    }
+    
+    // Try to find image in loaded images first (by hashId or numeric ID)
+    const foundImage = images.find((img: any) => 
+      img.hashId === imageIdParam || String(img.id) === imageIdParam
+    );
+    
+    if (foundImage) {
+      // Image is already loaded, use it directly
+      if (selectedImage && (selectedImage.id === foundImage.id || selectedImage.hashId === imageIdParam)) {
+        setIsLoadingOAuthImage(false);
+        return;
+      }
+      setSelectedImage(foundImage);
+      setIsLoadingOAuthImage(false);
+      return;
+    }
+    
+    // Image not in loaded list, fetch it by hashId or numeric ID
+    // The API supports both hashId and numeric ID
+    const imageIdOrHash = imageIdParam; // Can be hashId (string) or numeric ID (string)
+    
+    // Don't reopen if the same image is already selected
+    if (selectedImage && (selectedImage.hashId === imageIdOrHash || String(selectedImage.id) === imageIdOrHash)) {
+      setIsLoadingOAuthImage(false);
+      return;
+    }
+    
+    const authSuccess = searchParams.get('auth') === 'success';
+    
+    // Clean up auth and download params immediately to prevent loops
+    if (authSuccess && typeof window !== 'undefined') {
+      const currentUrl = new URL(window.location.href);
+      if (currentUrl.searchParams.has('auth') || currentUrl.searchParams.has('download')) {
+        currentUrl.searchParams.delete('auth');
+        currentUrl.searchParams.delete('download');
+        // Keep image param for now - will be cleaned when modal closes
+        window.history.replaceState({}, '', currentUrl.toString());
+      }
+    }
+    
+    // If returning from OAuth, prioritize fetching the specific image first
+    // Show loading state and fetch image directly without waiting for gallery
+    if (authSuccess) {
+      setIsLoadingOAuthImage(true);
+      fetchImageById(imageIdOrHash).then((image) => {
+        setIsLoadingOAuthImage(false);
+        if (image) {
+          setSelectedImage(image);
+          // Only clean up auth/download params, NOT the image param
+          // The image param should stay in URL to keep modal open
+          if (typeof window !== 'undefined') {
+            const currentUrl = new URL(window.location.href);
+            if (currentUrl.searchParams.has('auth') || currentUrl.searchParams.has('download')) {
+              currentUrl.searchParams.delete('auth');
+              currentUrl.searchParams.delete('download');
+              // Keep image param to maintain modal state
+              window.history.replaceState({}, '', currentUrl.toString());
+            }
+          }
+        }
+      });
+      return; // Don't wait for gallery images when returning from OAuth
+    }
+    
+    // If images are loaded, find and open the modal immediately
+    if (images.length > 0) {
+      const image = images.find((img: any) => 
+        img.hashId === imageIdOrHash || String(img.id) === imageIdOrHash
+      );
+      if (image) {
+        // Only set selectedImage if it's different (to avoid unnecessary re-renders)
+        if (!selectedImage || (selectedImage.id !== image.id && selectedImage.hashId !== image.hashId)) {
+          setSelectedImage(image);
+        }
+        setIsLoadingOAuthImage(false);
+        // Only clean up auth/download params, NOT the image param
+        // The image param should stay in URL to keep modal open
+        if (typeof window !== 'undefined' && authSuccess) {
+          const currentUrl = new URL(window.location.href);
+          if (currentUrl.searchParams.has('auth') || currentUrl.searchParams.has('download')) {
+            currentUrl.searchParams.delete('auth');
+            currentUrl.searchParams.delete('download');
+            // Keep image param to maintain modal state
+            window.history.replaceState({}, '', currentUrl.toString());
+          }
+        }
+        return;
+      }
+    }
+    
+    // If image not found in filtered results, fetch it directly from API
+    if (images.length > 0) {
+      setIsLoadingOAuthImage(true);
+      fetchImageById(imageIdOrHash).then((image) => {
+        setIsLoadingOAuthImage(false);
+        if (image) {
+          setSelectedImage(image);
+          // Only clean up auth/download params when returning from OAuth, NOT the image param
+          // The image param should stay in URL to keep modal open
+          if (typeof window !== 'undefined' && authSuccess) {
+            const currentUrl = new URL(window.location.href);
+            if (currentUrl.searchParams.has('auth') || currentUrl.searchParams.has('download')) {
+              currentUrl.searchParams.delete('auth');
+              currentUrl.searchParams.delete('download');
+              // Keep image param to maintain modal state
+              window.history.replaceState({}, '', currentUrl.toString());
+            }
+          }
+        }
+      });
+    }
+    
+    // If images are still loading, we'll retry when images load (this effect will re-run due to images dependency)
+  }, [searchParams, images, selectedImage, fetchImageById]);
   const isLoadingMore = isLoading && currentPage > 0;
 
   const breakpointColumns = viewMode === 'masonry' 
@@ -150,6 +317,16 @@ function GalleryContent() {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Stable handler function to prevent ImageCard re-renders when modal state changes
+  const handleImageClick = useCallback((image: any) => {
+    setSelectedImage(image);
+    // Add image hashId to URL for shareable links (use hashId instead of numeric ID)
+    const currentUrl = new URL(window.location.href);
+    const imageIdentifier = image.hashId || String(image.id);
+    currentUrl.searchParams.set('image', imageIdentifier);
+    window.history.pushState({}, '', currentUrl.toString());
+  }, []); // Empty deps - function is stable and doesn't depend on any values
 
   const handleNavigate = (direction: 'prev' | 'next') => {
     if (!selectedImage) return;
@@ -191,7 +368,18 @@ function GalleryContent() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="pt-14">
+      {/* Loading overlay for OAuth return - shows while fetching specific image */}
+      {isLoadingOAuthImage && (
+        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-lg font-medium text-foreground">Opening image...</p>
+            <p className="text-sm text-muted-foreground mt-2">Please wait</p>
+          </div>
+        </div>
+      )}
+      
+      <main className={`pt-14 ${isLoadingOAuthImage ? 'opacity-0 pointer-events-none' : ''}`}>
         {/* Enhanced Page Header */}
         <div className="relative overflow-hidden">
           {/* Background gradient */}
@@ -416,7 +604,7 @@ function GalleryContent() {
                   >
                     <ImageCard
                       image={image}
-                      onClick={() => setSelectedImage(image)}
+                      onClick={() => handleImageClick(image)}
                     />
                   </motion.div>
                 ))}
@@ -506,7 +694,22 @@ function GalleryContent() {
           }>
             <ImageModal
               image={selectedImage}
-              onClose={() => setSelectedImage(null)}
+              currentPage="gallery"
+              onClose={() => {
+                // Use requestAnimationFrame to defer state update and prevent unnecessary re-renders
+                // This ensures React Query cache is used instead of triggering refetch
+                requestAnimationFrame(() => {
+                  setSelectedImage(null);
+                  // Clean up image param from URL when modal closes
+                  const currentUrl = new URL(window.location.href);
+                  if (currentUrl.searchParams.has('image')) {
+                    currentUrl.searchParams.delete('image');
+                    currentUrl.searchParams.delete('download');
+                    currentUrl.searchParams.delete('auth');
+                    window.history.replaceState({}, '', currentUrl.toString());
+                  }
+                });
+              }}
               onNavigate={handleNavigate}
             />
           </Suspense>

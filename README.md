@@ -14,9 +14,11 @@ PixelVault is a **free image gallery platform** that allows users to:
 - **Browse** thousands of high-quality images across multiple categories
 - **Search** for specific images using keywords and tags
 - **Filter** images by category, orientation, colors, and more
-- **Download** images in multiple formats (16:9, 9:16, Original)
+- **Authenticate** with Google OAuth for secure access
+- **Download** images in multiple formats (16:9, 9:16, Original) - requires authentication
 - **Save** images to favorites and create custom collections
 - **View** images in beautiful masonry or grid layouts
+- **Seamless OAuth Flow** - Redirects back to the image you were viewing after login
 
 ---
 
@@ -200,6 +202,8 @@ The application provides RESTful API endpoints:
 - `GET /api/images/[id]/related` - Get related images
 
 ### Authentication
+- `GET /api/auth/google` - Initiate Google OAuth flow
+- `GET /api/auth/google/callback` - Handle Google OAuth callback
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
 - `GET /api/auth/me` - Get current user info
@@ -240,9 +244,10 @@ The application provides RESTful API endpoints:
 ### Key Libraries
 - **next-themes** - Dark/light theme management
 - **react-masonry-css** - Masonry grid layout
-- **@tanstack/react-query** - Data fetching and caching
+- **@tanstack/react-query** - Data fetching and caching (v5 with gcTime)
 - **lucide-react** - Beautiful icon library
 - **sonner** - Toast notifications
+- **Google OAuth 2.0** - Authentication via Google Sign-In
 
 ---
 
@@ -253,6 +258,10 @@ imageProject/
 ├── app/                      # Next.js App Router (Main Application)
 │   ├── api/                  # API Routes (Backend endpoints)
 │   │   ├── auth/            # Authentication endpoints
+│   │   │   ├── google/
+│   │   │   │   ├── route.ts              # GET /api/auth/google (initiate OAuth)
+│   │   │   │   └── callback/
+│   │   │   │       └── route.ts          # GET /api/auth/google/callback (OAuth callback)
 │   │   ├── images/          # Image endpoints
 │   │   │   ├── route.ts              # GET /api/images (list metadata)
 │   │   │   ├── [id]/
@@ -349,6 +358,14 @@ DATABASE_SSL=true
 # Optional: Connection pool settings
 DATABASE_POOL_MIN=2
 DATABASE_POOL_MAX=10
+
+# Google OAuth Configuration (Required for authentication)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
+
+# Session Secret (Required for authentication)
+SESSION_SECRET=your_random_session_secret_here
 ```
 
 **Database Details:**
@@ -426,6 +443,13 @@ npm run export:all       # Export all data
 
 ## 🎨 Features in Detail
 
+### Authentication & User Management
+- **Google OAuth Sign-In** - One-click authentication with Google account
+- **Session Management** - Secure session tokens stored in HTTP-only cookies
+- **Protected Downloads** - Image downloads require authentication
+- **Seamless Redirect** - After login, users are redirected back to the image they were viewing
+- **OAuth State Management** - CSRF protection for OAuth flows
+
 ### Home Page (`/`)
 - **Hero Section** - Eye-catching hero with search bar and category pills
 - **Featured Collections** - Carousel showcasing curated image collections
@@ -440,13 +464,18 @@ npm run export:all       # Export all data
 - **Masonry/Grid View** - Toggle between layout styles
 - **Infinite Scroll** - Automatic loading of more images
 - **Image Cards** - Hover effects with image metadata
+- **OAuth Return Optimization** - Smooth loading overlay when returning from authentication
+- **Smart Image Fetching** - Automatically fetches specific images even if they don't match current filters
 
 ### Image Modal
 - **Full-screen Preview** - Large image view with zoom controls
 - **Download Options** - Multiple format downloads (16:9, 9:16, Original)
+- **Authentication Required** - Prompts for login when attempting to download without authentication
+- **Manual Download** - Users must click download button (no auto-download after login)
 - **Image Metadata** - Author, downloads, category, tags
 - **Navigation** - Previous/Next image navigation
 - **Related Images** - Suggestions for similar images
+- **URL Management** - Clean URL parameters after download and modal close
 
 ### Tag Pages (`/tag/[tagName]`)
 - **Dynamic Routes** - Individual pages for each tag
@@ -659,6 +688,69 @@ User clicks image:
 - Favorite status displayed in UI
 - Thumbnails still loaded from `/api/images/[id]/thumbnail`
 
+### 7. OAuth Authentication Flow
+
+```
+User clicks "Download" without being logged in
+    ↓
+Sign-in modal appears with "Continue with Google" button
+    ↓
+User clicks Google Sign-In
+    ↓
+Frontend redirects to: GET /api/auth/google
+    ↓
+Backend generates OAuth state token and redirects to Google
+    ↓
+User authenticates with Google
+    ↓
+Google redirects to: GET /api/auth/google/callback?code=...
+    ↓
+Backend exchanges code for access token
+    ↓
+Backend retrieves user info from Google
+    ↓
+Backend creates/updates user in database
+    ↓
+Backend generates session token
+    ↓
+Backend redirects to: /gallery?image=84&auth=success
+    ↓
+Gallery page detects OAuth return
+    ↓
+Shows loading overlay: "Opening image..."
+    ↓
+Fetches specific image directly from API
+    ↓
+Opens image modal with the image
+    ↓
+User manually clicks download button
+    ↓
+Download starts ✅
+```
+
+### 8. Download Flow with Authentication
+
+```
+User clicks download button
+    ↓
+Check if user is authenticated
+    ↓
+If NOT authenticated:
+    - Store pending download format
+    - Show sign-in modal
+    - Construct return URL: /gallery?image=84
+    ↓
+User completes OAuth login
+    ↓
+Redirected back to: /gallery?image=84&auth=success
+    ↓
+Modal opens with image
+    ↓
+User clicks download button again
+    ↓
+Download starts (user is now authenticated) ✅
+```
+
 ---
 
 ## 🎯 Use Cases
@@ -677,6 +769,8 @@ User clicks image:
 - **Rate Limiting** - API routes protected with rate limiting
 - **SQL Injection Protection** - Parameterized queries prevent SQL injection
 - **Password Hashing** - User passwords are hashed (SHA-256)
+- **OAuth Security** - CSRF protection with state tokens for Google OAuth
+- **Session Tokens** - Secure HTTP-only cookies for session management
 - **Environment Variables** - Sensitive data stored in `.env.local`
 
 ---
@@ -689,6 +783,30 @@ User clicks image:
 - **Large Desktop**: > 1280px - Enhanced large screen layout
 
 ---
+
+## 🔄 Recent Improvements & Updates
+
+### OAuth Authentication Flow
+- **Google Sign-In Integration** - Users can sign in with their Google account
+- **Smart Redirect Handling** - After OAuth login, users are redirected to the specific image they were viewing
+- **Loading State Optimization** - Shows loading overlay during OAuth return instead of flashing gallery
+- **URL Parameter Management** - Automatically cleans up OAuth-related URL parameters to prevent redirect loops
+
+### Download Flow Enhancements
+- **Manual Download** - After OAuth login, users must manually click download (no auto-download)
+- **Authentication Prompts** - Clear sign-in modal when attempting to download without authentication
+- **URL Cleanup** - Automatically removes download-related URL parameters after successful download
+
+### Performance Optimizations
+- **React Query v5** - Updated to use `gcTime` instead of deprecated `cacheTime`
+- **Direct Image Fetching** - Fetches specific images directly from API when not found in filtered results
+- **Optimized Re-renders** - Fixed infinite loop issues with URL parameter handling
+- **Memoized Return URLs** - Prevents unnecessary recalculations during OAuth flows
+
+### User Experience Improvements
+- **Smooth OAuth Return** - Loading overlay prevents gallery flash when returning from authentication
+- **Better Error Handling** - Improved error messages and handling for authentication failures
+- **Clean URL Management** - URL parameters are properly cleaned up after actions complete
 
 ## 🚀 Deployment
 
@@ -742,6 +860,25 @@ If build fails:
 - Check browser console for CORS or network errors
 - Verify database connection to 34.46.166.6 is working
 - Check that API routes return proper `Content-Type` headers for binary data
+
+### OAuth Authentication Issues
+
+If Google Sign-In is not working:
+1. Verify `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set in `.env.local`
+2. Check `GOOGLE_REDIRECT_URI` matches your Google Cloud Console configuration
+3. Ensure redirect URI in Google Console includes: `http://localhost:3000/api/auth/google/callback`
+4. Check browser console for OAuth errors
+5. Verify `SESSION_SECRET` is set in environment variables
+6. Clear browser cookies if experiencing session issues
+
+### Download Issues
+
+If downloads are not working:
+1. Ensure user is authenticated (check for session token in cookies)
+2. Verify download endpoint `/api/images/[id]/file` is accessible
+3. Check browser console for authentication errors (401 status)
+4. Ensure OAuth callback is properly redirecting after login
+5. Check that URL parameters are being cleaned up properly
 
 ### Binary Image Issues
 

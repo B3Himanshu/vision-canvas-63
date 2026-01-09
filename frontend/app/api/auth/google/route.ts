@@ -33,13 +33,15 @@ export async function GET(request: NextRequest) {
     // Get return URL from query parameter (where to redirect after login)
     const returnUrl = request.nextUrl.searchParams.get('returnUrl') || '/';
     const pendingDownload = request.nextUrl.searchParams.get('download'); // Format: imageId:format
+    const pendingFavorite = request.nextUrl.searchParams.get('favorite'); // Image ID for pending favorite
     
-    // Generate state for CSRF protection with return URL and pending download
+    // Generate state for CSRF protection with return URL and pending download/favorite
     const stateData = {
       timestamp: Date.now(),
       random: Math.random().toString(36).substring(7),
       returnUrl: returnUrl,
       pendingDownload: pendingDownload || null,
+      pendingFavorite: pendingFavorite || null,
     };
     const state = Buffer.from(JSON.stringify(stateData)).toString('base64url');
 

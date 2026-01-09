@@ -17,6 +17,9 @@ interface SignInModalProps {
   onOpenChange: (open: boolean) => void;
   title?: string;
   description?: string;
+  returnUrl?: string;
+  pendingDownload?: string;
+  pendingFavorite?: string; // Image ID for pending favorite action
 }
 
 export function SignInModal({
@@ -24,6 +27,9 @@ export function SignInModal({
   onOpenChange,
   title = 'Sign in to download',
   description = 'Please sign in with your Google account to download images.',
+  returnUrl,
+  pendingDownload,
+  pendingFavorite,
 }: SignInModalProps) {
   const [isSigningIn, setIsSigningIn] = useState(false);
 
@@ -52,6 +58,9 @@ export function SignInModal({
             size="lg"
             onSuccess={handleSignInSuccess}
             onError={handleSignInError}
+            returnUrl={returnUrl}
+            pendingDownload={pendingDownload}
+            pendingFavorite={pendingFavorite}
           />
           
           <div className="text-center">

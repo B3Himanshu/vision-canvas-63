@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getImageById } from '@/backend/lib/images';
+import { decodeId } from '@/backend/lib/hashids';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,9 +9,18 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const id = parseInt(params.id, 10);
+    // Try to decode hash ID first, fallback to numeric ID for backward compatibility
+    let id: number | null = decodeId(params.id);
     
-    if (isNaN(id) || id <= 0) {
+    // If hash decoding failed, try parsing as numeric ID (backward compatibility)
+    if (id === null) {
+      const numericId = parseInt(params.id, 10);
+      if (!isNaN(numericId) && numericId > 0) {
+        id = numericId;
+      }
+    }
+    
+    if (!id || id <= 0) {
       return NextResponse.json(
         { success: false, error: 'Invalid image ID' },
         { status: 400 }

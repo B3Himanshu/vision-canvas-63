@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Download, X, Share2, Expand, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Monitor, Smartphone, Loader2, Image as ImageIcon, Palette, Shapes } from 'lucide-react';
@@ -10,10 +10,12 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { SignInModal } from '@/components/auth/SignInModal';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ImageModalProps {
   image: {
     id: number;
+    hashId?: string; // Secure hash ID for URLs (e.g., "a3xK9m")
     url?: string; // For backward compatibility
     thumbnailUrl?: string; // API returns this
     imageUrl?: string; // API returns this (full resolution)
@@ -26,6 +28,7 @@ interface ImageModalProps {
   } | null;
   onClose: () => void;
   onNavigate?: (direction: 'prev' | 'next') => void;
+  currentPage?: 'gallery' | 'favorites'; // Explicitly pass current page context
 }
 
 // Generate recommended images based on seed
@@ -39,13 +42,193 @@ const generateRecommendedImages = (currentId: number, count: number = 8) => {
   }));
 };
 
-const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
+const ImageModal = ({ image, onClose, onNavigate, currentPage }: ImageModalProps) => {
   const [isLiked, setIsLiked] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [showSignInModal, setShowSignInModal] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const [pendingDownload, setPendingDownload] = useState<string | null>(null);
+  const [pendingFavorite, setPendingFavorite] = useState(false);
+  const { isAuthenticated, user } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const hasCheckedFavoriteRef = useRef(false); // Track if we've already checked favorite status for this image
+  const currentImageIdRef = useRef<number | null>(null); // Track current image ID
+
+  // Check if image is favorited on mount or when image changes (silently in background)
+  // Only check once per image ID to prevent duplicate API calls
+  useEffect(() => {
+    if (!image) {
+      setIsLiked(false);
+      hasCheckedFavoriteRef.current = false;
+      currentImageIdRef.current = null;
+      return;
+    }
+
+    // Reset check flag ONLY if image ID actually changed (not on every render)
+    if (currentImageIdRef.current !== image.id) {
+      hasCheckedFavoriteRef.current = false;
+      currentImageIdRef.current = image.id;
+    }
+
+    // Only check if we haven't checked this image yet and user is authenticated
+    // Don't check if we've already checked this exact image ID
+    if (isAuthenticated && user && !hasCheckedFavoriteRef.current && currentImageIdRef.current === image.id) {
+      hasCheckedFavoriteRef.current = true;
+      checkFavoriteStatus();
+    } else if (!isAuthenticated || !user) {
+      // Only reset if authentication state changed, not on every render
+      if (hasCheckedFavoriteRef.current) {
+        setIsLiked(false);
+        hasCheckedFavoriteRef.current = false; // Reset so we check again when authenticated
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [image?.id, isAuthenticated]); // Only depend on image ID and auth state, not user object
+
+  // Memoize checkFavoriteStatus to prevent it from being recreated on every render
+  const checkFavoriteStatus = React.useCallback(async () => {
+    if (!image) {
+      return;
+    }
+    try {
+      const response = await fetch(`/api/favorites/check?imageId=${image.id}`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setIsLiked(data.isFavorited || false);
+      }
+    } catch (error) {
+      console.error('[ImageModal] checkFavoriteStatus: Error', error);
+    }
+  }, [image?.id]); // Only recreate if image ID changes
+
+  const handleLike = async (e?: React.MouseEvent) => {
+    // Stop event propagation to prevent any parent click handlers
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+
+    console.log('[ImageModal] handleLike called', {
+      imageId: image?.id,
+      hashId: (image as any)?.hashId,
+      isLiked,
+      isAuthenticated,
+      currentPage,
+    });
+
+    if (!image) {
+      console.warn('[ImageModal] handleLike: No image provided');
+      return;
+    }
+    
+    if (!isAuthenticated) {
+      console.log('[ImageModal] handleLike: User not authenticated, opening sign-in modal');
+      setPendingFavorite(true);
+      setShowSignInModal(true);
+      return;
+    }
+
+    // Optimistically update UI immediately (no loading state)
+    const previousLikedState = isLiked;
+    console.log('[ImageModal] handleLike: Optimistically updating UI', {
+      previousLikedState,
+      newLikedState: !isLiked,
+    });
+    setIsLiked(!isLiked);
+
+    try {
+      if (previousLikedState) {
+        // Remove from favorites
+        console.log('[ImageModal] handleLike: Removing from favorites', { imageId: image.id });
+        const response = await fetch(`/api/favorites?imageId=${image.id}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        
+        console.log('[ImageModal] handleLike: DELETE response', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+        });
+
+        if (response.ok) {
+          const responseData = await response.json().catch(() => null);
+          console.log('[ImageModal] handleLike: Successfully removed from favorites', responseData);
+          toast.success('Removed from favorites');
+          
+          // Invalidate favorites query to update the favorites page
+          queryClient.invalidateQueries({ queryKey: ['favorites'] });
+          
+          // If we're on the favorites page, close the modal since the image is no longer favorited
+          if (currentPage === 'favorites') {
+            console.log('[ImageModal] handleLike: On favorites page, closing modal');
+            setTimeout(() => {
+              onClose();
+            }, 500); // Small delay to show the toast message
+          }
+        } else {
+          // Revert on error
+          const errorText = await response.text().catch(() => 'Unknown error');
+          console.error('[ImageModal] handleLike: Failed to remove from favorites', {
+            status: response.status,
+            statusText: response.statusText,
+            errorText,
+          });
+          setIsLiked(previousLikedState);
+          toast.error('Failed to remove from favorites');
+        }
+      } else {
+        // Add to favorites
+        console.log('[ImageModal] handleLike: Adding to favorites', { imageId: image.id });
+        const response = await fetch('/api/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ imageId: image.id }),
+        });
+        
+        console.log('[ImageModal] handleLike: POST response', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+        });
+
+        if (response.ok) {
+          const responseData = await response.json().catch(() => null);
+          console.log('[ImageModal] handleLike: Successfully added to favorites', responseData);
+          toast.success('Added to favorites');
+          
+          // Invalidate favorites query to update the favorites page
+          queryClient.invalidateQueries({ queryKey: ['favorites'] });
+          
+          // Do NOT navigate or close modal - stay on current page
+        } else {
+          // Revert on error
+          const errorText = await response.text().catch(() => 'Unknown error');
+          console.error('[ImageModal] handleLike: Failed to add to favorites', {
+            status: response.status,
+            statusText: response.statusText,
+            errorText,
+          });
+          setIsLiked(previousLikedState);
+          toast.error('Failed to add to favorites');
+        }
+      }
+    } catch (error) {
+      // Revert on error
+      console.error('[ImageModal] handleLike: Exception occurred', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
+        previousLikedState,
+      });
+      setIsLiked(previousLikedState);
+      toast.error('Failed to update favorite');
+    }
+  };
 
   const recommendedImages = useMemo(() => 
     image ? generateRecommendedImages(image.id) : [], 
@@ -55,6 +238,102 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
   if (!image) return null;
 
   const imageType = image.type || 'photo';
+
+  // Get return URL that preserves current page context
+  // Now uses dedicated /image/[id] route with hash IDs for secure URLs
+  // Memoized to prevent recalculation on every render
+  const returnUrl = useMemo(() => {
+    if (!image) return '/gallery';
+    
+    // Use hash ID (secure) if available, fallback to numeric ID for backward compatibility
+    const imageId = (image as any).hashId || image.id;
+    // Always use dedicated image route with hash ID for secure URLs
+    // This provides secure URLs like /image/a3xK9m instead of /image/96
+    return `/image/${imageId}`;
+  }, [image]);
+
+  // Clean up URL params when modal opens (runs once per image)
+  useEffect(() => {
+    if (!image || typeof window === 'undefined') return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasAuth = urlParams.has('auth');
+    const hasDownload = urlParams.has('download');
+    const imageParam = urlParams.get('image');
+
+    // Clean up OAuth-related params immediately to prevent loops
+    // Check both hashId and numeric ID for backward compatibility
+    const imageIdentifier = image.hashId || String(image.id);
+    if ((hasAuth || hasDownload) && (imageParam === imageIdentifier || imageParam === String(image.id))) {
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('download');
+      newUrl.searchParams.delete('auth');
+      // Image param will be cleaned when modal closes
+      window.history.replaceState({}, '', newUrl.toString());
+    }
+  }, [image?.id]); // Only run once when image changes
+
+  // Handle OAuth return for favoriting (when auth=success but no download param)
+  useEffect(() => {
+    if (!image || !isAuthenticated || typeof window === 'undefined' || !pendingFavorite) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const authSuccess = urlParams.get('auth') === 'success';
+    const hasDownload = urlParams.has('download');
+    const imageParam = urlParams.get('image');
+
+    // If returning from OAuth with auth=success but no download param, and we were pending favorite
+    // This means the user signed in to favorite the image
+    if (authSuccess && !hasDownload) {
+      // Check if we're on /image/[id] route or if image param matches
+      const isOnImagePage = window.location.pathname.startsWith('/image/');
+      const imageId = (image as any).hashId || image.id;
+      // Check if the current pathname matches the image hash ID or numeric ID
+      const pathnameMatches = isOnImagePage && (
+        window.location.pathname === `/image/${imageId}` || 
+        window.location.pathname === `/image/${image.id}`
+      );
+      const imageIdMatches = !imageParam || imageParam === String(image.id) || imageParam === String(imageId);
+      
+      if (pathnameMatches || imageIdMatches) {
+        // Automatically favorite the image
+        const favoriteImage = async () => {
+          try {
+            const response = await fetch('/api/favorites', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ imageId: image.id }),
+            });
+            if (response.ok) {
+              setIsLiked(true);
+              toast.success('Added to favorites');
+              // Invalidate favorites query to update the favorites page
+              queryClient.invalidateQueries({ queryKey: ['favorites'] });
+            }
+          } catch (error) {
+            console.error('Error favoriting image after OAuth:', error);
+            toast.error('Failed to favorite image');
+          } finally {
+            // Reset pending favorite state
+            setPendingFavorite(false);
+            // Clean up URL params but keep the /image/[id] path
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('auth');
+            newUrl.searchParams.delete('download');
+            // Only delete image param if it exists (for query param URLs)
+            if (newUrl.searchParams.has('image')) {
+              newUrl.searchParams.delete('image');
+            }
+            // Preserve the pathname (e.g., /image/95)
+            window.history.replaceState({}, '', newUrl.toString());
+          }
+        };
+
+        favoriteImage();
+      }
+    }
+  }, [image?.id, isAuthenticated, pendingFavorite, queryClient]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -75,7 +354,9 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
   }, [image, onClose, onNavigate]);
 
   const handleShare = async () => {
-    const shareUrl = `${window.location.origin}/gallery?image=${image.id}`;
+    // Use dedicated image route with hash ID for secure URLs
+    const imageId = (image as any).hashId || image.id;
+    const shareUrl = `${window.location.origin}/image/${imageId}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
       toast.success('Link copied to clipboard!');
@@ -87,6 +368,8 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
   const handleDownload = async (format: string, dimensions: string) => {
     // Check if user is authenticated
     if (!isAuthenticated) {
+      // Store pending download and current page URL
+      setPendingDownload(format);
       setShowSignInModal(true);
       return;
     }
@@ -94,7 +377,22 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
     setIsDownloading(format);
     
     try {
-      const imageUrl = image.imageUrl || image.url || `/api/images/${image.id}/file`;
+      // Use hash ID (secure) if available, fallback to numeric ID for backward compatibility
+      const imageId = (image as any).hashId || image.id;
+      
+      // All downloads use highest quality (PNG/JPG) format
+      let imageUrl: string;
+      if (format === 'original') {
+        imageUrl = `/api/images/${imageId}/original`; // Original size, highest quality
+      } else if (format === '16x9') {
+        imageUrl = `/api/images/${imageId}/download/16x9`; // 1920x1080, highest quality
+      } else if (format === '9x16') {
+        imageUrl = `/api/images/${imageId}/download/9x16`; // 1080x1920, highest quality
+      } else {
+        // Fallback to original
+        imageUrl = `/api/images/${imageId}/original`;
+      }
+      
       const response = await fetch(imageUrl, {
         credentials: 'include', // Include cookies for authentication
       });
@@ -110,6 +408,14 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
 
       const blob = await response.blob();
       
+      // Get file extension from Content-Type header or blob type
+      const contentType = response.headers.get('content-type') || blob.type;
+      const getExtensionFromMime = (mime: string): string => {
+        if (mime.includes('png')) return 'png';
+        if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg';
+        return 'jpg'; // Default fallback (all downloads are PNG/JPG now)
+      };
+      
       // Use setTimeout to ensure DOM operations happen after current execution context
       setTimeout(() => {
         try {
@@ -117,8 +423,10 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
           const link = document.createElement('a');
           link.href = url;
           
-          const extension = imageType === 'illustration' ? 'svg' : imageType === 'icon' ? 'png' : 'jpg';
-          link.download = `${image.title.toLowerCase().replace(/\s+/g, '-')}-${format}.${extension}`;
+          // All formats now use highest quality (PNG/JPG)
+          const extension = getExtensionFromMime(contentType);
+          const formatLabel = format === 'original' ? 'original' : format;
+          link.download = `${image.title.toLowerCase().replace(/\s+/g, '-')}-${formatLabel}.${extension}`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -128,9 +436,25 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
             window.URL.revokeObjectURL(url);
           }, 100);
           
+          // Clean up image param from URL after successful download
+              const currentUrl = new URL(window.location.href);
+              const imageId = (image as any).hashId || image.id;
+              if (currentUrl.searchParams.get('image') === String(image.id) || currentUrl.pathname.includes(`/image/${imageId}`)) {
+                currentUrl.searchParams.delete('image');
+                currentUrl.searchParams.delete('download');
+                currentUrl.searchParams.delete('auth');
+                window.history.replaceState({}, '', currentUrl.toString());
+              }
+          
           // Show success toast
-          toast.success(`Downloaded ${format} format successfully!`, {
-            description: `Image saved as ${image.title.toLowerCase().replace(/\s+/g, '-')}-${format}.${extension}`,
+          const formatNames: Record<string, string> = {
+            'original': 'Original (Highest Quality)',
+            '16x9': '16:9 Landscape (Highest Quality)',
+            '9x16': '9:16 Portrait (Highest Quality)',
+          };
+          const qualityLabel = formatNames[format] || `${format} (Highest Quality)`;
+          toast.success(`Downloaded ${qualityLabel} successfully!`, {
+            description: `Image saved as ${image.title.toLowerCase().replace(/\s+/g, '-')}-${formatLabel}.${extension}`,
           });
         } catch (domError) {
           console.error('DOM operation failed:', domError);
@@ -181,11 +505,28 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl overflow-y-auto"
-        onClick={onClose}
+        onClick={(e) => {
+          // Only close if clicking directly on the backdrop, not on child elements
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
       >
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 md:px-6 h-16 glass">
-          <Button variant="ghost" size="icon" onClick={onClose}>
+        <div 
+          className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 md:px-6 h-16 glass"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onClose();
+            }}
+            type="button"
+          >
             <X className="h-6 w-6" />
           </Button>
           <div className="flex items-center gap-2">
@@ -193,10 +534,16 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
               <Share2 className="h-5 w-5" />
             </Button>
             <Button 
+              type="button"
               variant="ghost" 
               size="icon"
-              onClick={() => setIsLiked(!isLiked)}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleLike(e);
+              }}
               className={isLiked ? 'text-destructive' : ''}
+              title={isLiked ? 'Remove from favorites' : 'Add to favorites'}
             >
               <Heart className={`h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
             </Button>
@@ -228,7 +575,10 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
         {/* Content */}
         <div 
           className="pt-20 pb-8 px-4 md:px-8 min-h-screen flex flex-col items-center"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
         >
           {/* Image */}
           <motion.div 
@@ -243,7 +593,7 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
                   <Image
                     src={
                       // Always use full resolution HD image for viewing (public endpoint)
-                      image.imageUrl || image.url || `/api/images/${image.id}/file`
+                      image.imageUrl || image.url || `/api/images/${(image as any).hashId || image.id}/file`
                     }
                     alt={image.title}
                     fill
@@ -307,7 +657,7 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
               <div className="flex-shrink-0">
                 <div className="w-20 h-20 rounded-xl overflow-hidden border border-border shadow-lg relative">
                   <Image
-                    src={image.thumbnailUrl || image.url || `/api/images/${image.id}/thumbnail`}
+                    src={image.thumbnailUrl || image.url || `/api/images/${(image as any).hashId || image.id}/thumbnail`}
                     alt={image.title}
                     fill
                     className="object-cover"
@@ -341,7 +691,7 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
 
               {/* Three Download Buttons */}
               <div className="grid grid-cols-3 gap-3">
-                {/* 16:9 Landscape */}
+                {/* 16:9 Landscape - Highest Quality */}
                 <button 
                   onClick={() => handleDownload('16x9', '1920x1080')}
                   disabled={isDownloading === '16x9'}
@@ -349,14 +699,15 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
                   style={{
                     background: 'linear-gradient(135deg, hsl(199, 89%, 48%) 0%, hsl(262, 83%, 58%) 100%)',
                   }}
+                  title="Download 16:9 format in highest quality (PNG/JPG)"
                 >
                   <div className="text-white font-semibold mb-1">
                     {isDownloading === '16x9' ? 'Downloading...' : '16:9'}
                   </div>
-                  <span className="text-white/70 text-xs">1920 × 1080</span>
+                  <span className="text-white/70 text-xs">1920 × 1080 • PNG/JPG</span>
                 </button>
 
-                {/* 9:16 Portrait */}
+                {/* 9:16 Portrait - Highest Quality */}
                 <button 
                   onClick={() => handleDownload('9x16', '1080x1920')}
                   disabled={isDownloading === '9x16'}
@@ -364,14 +715,15 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
                   style={{
                     background: 'linear-gradient(135deg, hsl(262, 83%, 58%) 0%, hsl(330, 81%, 60%) 100%)',
                   }}
+                  title="Download 9:16 format in highest quality (PNG/JPG)"
                 >
                   <div className="text-white font-semibold mb-1">
                     {isDownloading === '9x16' ? 'Downloading...' : '9:16'}
                   </div>
-                  <span className="text-white/70 text-xs">1080 × 1920</span>
+                  <span className="text-white/70 text-xs">1080 × 1920 • PNG/JPG</span>
                 </button>
 
-                {/* Download */}
+                {/* Download - Highest Quality */}
                 <button 
                   onClick={() => handleDownload('original', 'original')}
                   disabled={isDownloading === 'original'}
@@ -379,11 +731,12 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
                   style={{
                     background: 'linear-gradient(135deg, hsl(330, 81%, 60%) 0%, hsl(199, 89%, 48%) 100%)',
                   }}
+                  title="Download original image in highest quality (PNG/JPG format)"
                 >
                   <div className="text-white font-semibold mb-1">
                     {isDownloading === 'original' ? 'Downloading...' : 'Download'}
                   </div>
-                  <span className="text-white/70 text-xs">Full Resolution</span>
+                  <span className="text-white/70 text-xs">PNG/JPG • Highest Quality</span>
                 </button>
               </div>
             </div>
@@ -513,9 +866,18 @@ const ImageModal = ({ image, onClose, onNavigate }: ImageModalProps) => {
       {/* Sign-In Modal */}
       <SignInModal
         open={showSignInModal}
-        onOpenChange={setShowSignInModal}
-        title="Sign in to download"
-        description="Please sign in with your Google account to download this image."
+        onOpenChange={(open) => {
+          setShowSignInModal(open);
+          if (!open) {
+            setPendingFavorite(false);
+            setPendingDownload(null);
+          }
+        }}
+        title={pendingFavorite ? "Sign in to favorite" : "Sign in to download"}
+        description={pendingFavorite ? "Please sign in with your Google account to favorite images." : "Please sign in with your Google account to download this image."}
+        returnUrl={returnUrl}
+        pendingDownload={pendingDownload && image && !pendingFavorite ? `${image.id}:${pendingDownload}` : undefined}
+        pendingFavorite={pendingFavorite && image ? String(image.id) : undefined}
       />
     </AnimatePresence>
   );

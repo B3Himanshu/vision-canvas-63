@@ -14,7 +14,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  signInWithGoogle: () => void;
+  signInWithGoogle: (returnUrl?: string, pendingDownload?: string, pendingFavorite?: string) => void;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -67,14 +67,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const signInWithGoogle = useCallback((returnUrl?: string, pendingDownload?: string) => {
-    // Build OAuth URL with return URL and pending download info
+  const signInWithGoogle = useCallback((returnUrl?: string, pendingDownload?: string, pendingFavorite?: string) => {
+    // Build OAuth URL with return URL and pending download/favorite info
     const url = new URL('/api/auth/google', window.location.origin);
     if (returnUrl) {
       url.searchParams.set('returnUrl', returnUrl);
     }
     if (pendingDownload) {
       url.searchParams.set('download', pendingDownload);
+    }
+    if (pendingFavorite) {
+      url.searchParams.set('favorite', pendingFavorite);
     }
     // Redirect to Google OAuth
     window.location.href = url.toString();

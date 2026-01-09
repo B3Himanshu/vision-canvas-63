@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import { decode } from 'blurhash';
 
@@ -75,13 +76,22 @@ export function BlurHashImage({
   };
 
   // Check if image is already in browser cache (for instant display)
+  // Use ref to track if we've already checked this src to prevent duplicate checks
+  const checkedSrcRef = useRef<string | null>(null);
+  
   useEffect(() => {
-    if (!src || imageLoaded) return;
+    if (!src || imageLoaded || checkedSrcRef.current === src) return;
     
+    checkedSrcRef.current = src;
+    
+    // Check if image is already in browser cache
+    // Use HTMLImageElement constructor explicitly to avoid conflict with Next.js Image component
     const img = document.createElement('img');
+    
+    // Preload image to check cache
     img.src = src;
     
-    // If image is already cached, it might be complete immediately
+    // If already loaded (cached), show immediately
     if (img.complete) {
       setImageLoaded(true);
       onLoad?.();

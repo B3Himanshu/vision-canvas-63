@@ -4,6 +4,7 @@
 
 import { getPool } from './db';
 import { validateId, validateString } from './validation';
+import { encodeId } from './hashids';
 
 export interface Favorite {
   id: number;
@@ -13,7 +14,7 @@ export interface Favorite {
 }
 
 /**
- * Get all favorites for a user
+ * Get all favorites for a user with full image data
  */
 export async function getUserFavorites(userId: string) {
   const pool = getPool();
@@ -21,21 +22,63 @@ export async function getUserFavorites(userId: string) {
     const validatedUserId = validateString(userId, 255);
     const client = await pool.connect();
     
+    // Join with generated_images to get full image data
     const result = await client.query(
-      'SELECT * FROM favorites WHERE user_id = $1 ORDER BY created_at DESC',
+      `SELECT 
+        f.id as favorite_id,
+        f.created_at as favorited_at,
+        gi.id,
+        gi.description,
+        gi.tag1,
+        gi.tag2,
+        gi.tag3,
+        gi.image_width,
+        gi.image_height,
+        gi.blurhash,
+        gi.created_at
+      FROM favorites f
+      INNER JOIN generated_images gi ON f.image_id = gi.id
+      WHERE f.user_id = $1 
+        AND (gi.is_deleted = false OR gi.is_deleted IS NULL)
+      ORDER BY f.created_at DESC`,
       [validatedUserId]
     );
     
     client.release();
     
+    // Map to image format
+    const images = result.rows.map(row => {
+      const tags: string[] = [];
+      if (row.tag1) tags.push(row.tag1);
+      if (row.tag2) tags.push(row.tag2);
+      if (row.tag3) tags.push(row.tag3);
+      
+      const hashId = encodeId(row.id);
+      return {
+        id: row.id,
+        hashId: hashId, // Add hash ID for secure URLs
+        description: row.description,
+        tag1: row.tag1,
+        tag2: row.tag2,
+        tag3: row.tag3,
+        title: row.description || `Image ${row.id}`,
+        author: 'system',
+        width: row.image_width || 600,
+        height: row.image_height || 400,
+        category: row.tag1 || 'uncategorized',
+        tags: tags,
+        type: 'photo' as const,
+        thumbnailUrl: `/api/images/${hashId}/thumbnail`,
+        imageUrl: `/api/images/${hashId}/file`,
+        blurhash: row.blurhash || null,
+        downloads: 0,
+        favorited_at: row.favorited_at,
+      };
+    });
+    
     return {
       success: true,
-      data: result.rows.map(row => ({
-        id: row.id,
-        user_id: row.user_id,
-        image_id: row.image_id,
-        created_at: row.created_at,
-      })),
+      data: images,
     };
   } catch (error) {
     console.error('Error fetching favorites:', error);

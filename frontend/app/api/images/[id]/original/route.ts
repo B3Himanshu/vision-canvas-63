@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getImageThumbnail } from '@/backend/lib/images';
+import { getOriginalImageFile } from '@/backend/lib/images';
+import { getUserIdFromRequest } from '@/lib/auth';
 import { decodeId } from '@/backend/lib/hashids';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/images/[id]/thumbnail
- * Returns thumbnail binary image data
+ * GET /api/images/[id]/original
+ * Returns original image binary data (highest quality - PNG/JPG)
+ * Requires authentication for downloads
  * Accepts both hash IDs (e.g., "a3xK9m") and numeric IDs for backward compatibility
  */
 export async function GET(
@@ -14,6 +16,12 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check authentication for downloads
+    const userId = getUserIdFromRequest(request);
+    if (!userId || userId === 'anonymous') {
+      return new NextResponse('Authentication required', { status: 401 });
+    }
+
     // Try to decode hash ID first, fallback to numeric ID for backward compatibility
     let id: number | null = decodeId(params.id);
     
@@ -29,11 +37,11 @@ export async function GET(
       return new NextResponse('Invalid image ID', { status: 400 });
     }
 
-    const result = await getImageThumbnail(id);
+    const result = await getOriginalImageFile(id);
 
     if (!result.success) {
-      return new NextResponse(result.error || 'Thumbnail not found', {
-        status: result.error === 'Image not found' || result.error === 'Thumbnail not available' ? 404 : 500,
+      return new NextResponse(result.error || 'Image not found', {
+        status: result.error === 'Image not found' || result.error === 'Image data not available' ? 404 : 500,
       });
     }
 
@@ -52,20 +60,28 @@ export async function GET(
       return new NextResponse(null, { status: 304 }); // Not Modified
     }
 
-    // Return binary image data with proper headers (aggressive browser cache)
+    // Determine file extension from MIME type
+    const mimeToExt: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/webp': 'webp',
+    };
+    const extension = mimeToExt[result.mimeType || 'image/jpeg'] || 'jpg';
+
+    // Return binary image data with proper headers
     return new NextResponse(imageBuffer, {
       status: 200,
       headers: {
-        'Content-Type': result.mimeType || 'image/webp', // WebP format
+        'Content-Type': result.mimeType || 'image/jpeg',
         'Content-Length': imageBuffer.length.toString(),
-        // Aggressive caching: 1 hour public cache, browser can cache for 1 hour without revalidation
-        'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400', // 1 hour cache, 24h stale-while-revalidate
+        'Cache-Control': 'no-cache, must-revalidate', // Browser caches but validates with server
         'ETag': `"${etag}"`, // ETag for cache validation
-        'Content-Disposition': `inline; filename="thumbnail-${id}.webp"`,
+        'Content-Disposition': `attachment; filename="image-${id}-original.${extension}"`, // Force download
       },
     });
   } catch (error) {
-    console.error('Thumbnail API Error:', error);
+    console.error('Original Image API Error:', error);
     return new NextResponse('Internal server error', { status: 500 });
   }
 }

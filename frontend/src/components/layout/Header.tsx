@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { User, Menu, X, Search, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { User, Menu, X, Search, LogOut, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,9 +25,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSignInModal, setShowSignInModal] = useState(false);
   
-  // Use hooks - they should work in client components
-  // If they fail, it's likely an error boundary issue which Next.js will handle
-  const pathname = usePathname();
+  // Use hooks - router is safe, pathname was unused so removed
   const router = useRouter();
   const { user, isAuthenticated, signOut, loading } = useAuth();
 
@@ -101,6 +99,13 @@ const Header = () => {
               className="px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all font-medium"
             >
               Explore
+            </Link>
+            <Link 
+              href="/favorites" 
+              className="px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all font-medium flex items-center gap-1.5"
+            >
+              <Heart className="h-4 w-4" />
+              Favorites
             </Link>
             <Link 
               href="/gallery?category=nature" 
@@ -208,6 +213,14 @@ const Header = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Explore
+              </Link>
+              <Link 
+                href="/favorites" 
+                className="text-foreground py-2 font-medium flex items-center gap-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Heart className="h-4 w-4" />
+                Favorites
               </Link>
               <Link 
                 href="/gallery?category=nature" 

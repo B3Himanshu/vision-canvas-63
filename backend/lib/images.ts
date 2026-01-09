@@ -1,9 +1,11 @@
 import { getPool } from './db';
 import { validateString, validateId, validateStringArray, validateCategory, validateImageType, validateUrl, validatePagination } from './validation';
 import { processUploadedImage } from './image-processing';
+import { encodeId } from './hashids';
 
 export interface Image {
   id: number;
+  hashId?: string; // Secure hash ID for URLs (e.g., "a3xK9m")
   image_url?: string;
   image_file?: string;
   prompt_used?: string;
@@ -182,8 +184,10 @@ export async function getImages(filters: ImageFilters = {}) {
         if (row.tag2) tags.push(row.tag2);
         if (row.tag3) tags.push(row.tag3);
         
+        const hashId = encodeId(row.id);
         return {
           id: row.id,
+          hashId: hashId, // Add hash ID for secure URLs
           description: row.description,
           tag1: row.tag1,
           tag2: row.tag2,
@@ -201,9 +205,9 @@ export async function getImages(filters: ImageFilters = {}) {
           category: row.tag1 || 'uncategorized',
           tags: tags,
           type: 'photo' as const,
-          // URLs for frontend to use
-          thumbnailUrl: `/api/images/${row.id}/thumbnail`,
-          imageUrl: `/api/images/${row.id}/file`,
+          // URLs for frontend to use - use hash ID for secure URLs
+          thumbnailUrl: `/api/images/${hashId}/thumbnail`,
+          imageUrl: `/api/images/${hashId}/file`,
           // BlurHash for instant preview (null if column doesn't exist)
           blurhash: hasBlurhash ? (row.blurhash || null) : null,
         };
@@ -288,10 +292,12 @@ export async function getImageById(id: number, trackView: boolean = true) {
     if (row.tag2) tags.push(row.tag2);
     if (row.tag3) tags.push(row.tag3);
     
+    const hashId = encodeId(row.id);
     return {
       success: true,
       data: {
         id: row.id,
+        hashId: hashId, // Add hash ID for secure URLs
         description: row.description,
         tag1: row.tag1,
         tag2: row.tag2,
@@ -309,9 +315,9 @@ export async function getImageById(id: number, trackView: boolean = true) {
         category: row.tag1 || 'uncategorized',
         tags: tags,
         type: 'photo' as const,
-        // URLs for frontend
-        thumbnailUrl: `/api/images/${row.id}/thumbnail`,
-        imageUrl: `/api/images/${row.id}/file`,
+        // URLs for frontend - use hash ID for secure URLs
+        thumbnailUrl: `/api/images/${hashId}/thumbnail`,
+        imageUrl: `/api/images/${hashId}/file`,
         // BlurHash for instant preview (null if column doesn't exist)
         blurhash: hasBlurhash ? (row.blurhash || null) : null,
       },
@@ -373,7 +379,7 @@ export async function getImageThumbnail(id: number) {
 }
 
 /**
- * Get full image binary data from database
+ * Get full image binary data from database (WebP format for web display)
  * @param id - Image ID
  * @returns Buffer containing full image binary data and MIME type
  */
@@ -408,6 +414,190 @@ export async function getImageFile(id: number) {
     };
   } catch (error) {
     console.error('Error fetching image file:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Get original image binary data from database (highest quality - PNG/JPG)
+ * @param id - Image ID
+ * @returns Buffer containing original image binary data and MIME type
+ */
+export async function getOriginalImageFile(id: number) {
+  const pool = getPool();
+  try {
+    const validatedId = validateId(id);
+    const client = await pool.connect();
+    
+    // Check if original_image_data column exists (for backward compatibility)
+    let hasOriginalColumn = true;
+    try {
+      await client.query(`
+        SELECT original_image_data 
+        FROM generated_images 
+        WHERE id = $1 
+        LIMIT 1
+      `, [validatedId]);
+    } catch (columnError: any) {
+      // Column doesn't exist yet - migration not run
+      if (columnError.message?.includes('column') && columnError.message?.includes('does not exist')) {
+        hasOriginalColumn = false;
+      } else {
+        throw columnError; // Re-throw if it's a different error
+      }
+    }
+    
+    // Build query based on whether column exists
+    const query = hasOriginalColumn
+      ? `SELECT original_image_data, original_mime_type, image_data, image_mime_type
+         FROM generated_images
+         WHERE id = $1 AND (is_deleted = false OR is_deleted IS NULL)`
+      : `SELECT image_data, image_mime_type
+         FROM generated_images
+         WHERE id = $1 AND (is_deleted = false OR is_deleted IS NULL)`;
+    
+    const result = await client.query(query, [validatedId]);
+    client.release();
+
+    if (result.rows.length === 0) {
+      return { success: false, error: 'Image not found' };
+    }
+
+    const row = result.rows[0];
+
+    // If original exists, return it (highest quality)
+    if (hasOriginalColumn && row.original_image_data && row.original_mime_type) {
+      return {
+        success: true,
+        data: row.original_image_data, // Buffer/BYTEA - Original PNG/JPG
+        mimeType: row.original_mime_type, // image/png or image/jpeg
+        isOriginal: true,
+      };
+    }
+
+    // Fallback to WebP if original doesn't exist (for backward compatibility)
+    if (row.image_data) {
+      return {
+        success: true,
+        data: row.image_data, // Buffer/BYTEA - WebP fallback
+        mimeType: row.image_mime_type || 'image/webp',
+        isOriginal: false,
+      };
+    }
+
+    return { success: false, error: 'Image data not available' };
+  } catch (error) {
+    console.error('Error fetching original image file:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Get resized original image (highest quality - PNG/JPG)
+ * @param id - Image ID
+ * @param width - Target width
+ * @param height - Target height
+ * @returns Buffer containing resized image in original format (PNG/JPG)
+ */
+export async function getResizedOriginalImage(id: number, width: number, height: number) {
+  const pool = getPool();
+  try {
+    const validatedId = validateId(id);
+    const client = await pool.connect();
+    
+    // Check if original_image_data column exists (for backward compatibility)
+    let hasOriginalColumn = true;
+    let imageData: Buffer;
+    let mimeType: string;
+    
+    try {
+      const result = await client.query(
+        `SELECT original_image_data, original_mime_type, image_data, image_mime_type
+         FROM generated_images
+         WHERE id = $1 AND (is_deleted = false OR is_deleted IS NULL)`,
+        [validatedId]
+      );
+      
+      if (result.rows.length === 0) {
+        client.release();
+        return { success: false, error: 'Image not found' };
+      }
+
+      const row = result.rows[0];
+      
+      // Use original if available, otherwise fallback to WebP
+      if (row.original_image_data && row.original_mime_type) {
+        imageData = row.original_image_data;
+        mimeType = row.original_mime_type;
+      } else if (row.image_data) {
+        imageData = row.image_data;
+        mimeType = row.image_mime_type || 'image/webp';
+        hasOriginalColumn = false; // Using WebP fallback
+      } else {
+        client.release();
+        return { success: false, error: 'Image data not available' };
+      }
+    } catch (columnError: any) {
+      // Column doesn't exist yet - migration not run
+      if (columnError.message?.includes('column') && columnError.message?.includes('does not exist')) {
+        const result = await client.query(
+          `SELECT image_data, image_mime_type
+           FROM generated_images
+           WHERE id = $1 AND (is_deleted = false OR is_deleted IS NULL)`,
+          [validatedId]
+        );
+        
+        if (result.rows.length === 0) {
+          client.release();
+          return { success: false, error: 'Image not found' };
+        }
+        
+        const row = result.rows[0];
+        if (!row.image_data) {
+          client.release();
+          return { success: false, error: 'Image data not available' };
+        }
+        
+        imageData = row.image_data;
+        mimeType = row.image_mime_type || 'image/webp';
+        hasOriginalColumn = false;
+      } else {
+        client.release();
+        throw columnError; // Re-throw if it's a different error
+      }
+    }
+    
+    client.release();
+
+    // Import resize function
+    const { resizeToDimensions } = await import('./image-processing');
+    
+    // Determine format from MIME type
+    const format: 'png' | 'jpeg' = mimeType.includes('png') ? 'png' : 'jpeg';
+    
+    // Resize image to target dimensions with highest quality
+    const resizedBuffer = await resizeToDimensions(
+      imageData,
+      width,
+      height,
+      format
+    );
+
+    return {
+      success: true,
+      data: resizedBuffer,
+      mimeType: format === 'png' ? 'image/png' : 'image/jpeg', // Return as PNG/JPG
+      width,
+      height,
+    };
+  } catch (error) {
+    console.error('Error resizing original image:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -497,14 +687,16 @@ export async function insertImage(
     const client = await pool.connect();
 
     // Insert into generated_images table
+    // Store both WebP (for web display) and original (for highest quality downloads)
     const result = await client.query(
       `INSERT INTO generated_images (
         description, tag1, tag2, tag3, status,
         image_data, thumbnail_data, image_mime_type,
+        original_image_data, original_mime_type, original_image_size,
         image_width, image_height, image_size,
         blurhash,
         created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING id`,
       [
         metadata.description || null,
@@ -512,9 +704,12 @@ export async function insertImage(
         metadata.tag2 || null,
         metadata.tag3 || null,
         metadata.status || 'pending',
-        processed.imageWebP, // WebP full image
+        processed.imageWebP, // WebP full image (for web display)
         processed.thumbnailWebP, // WebP thumbnail
         'image/webp',
+        processed.originalImage, // Original image (PNG/JPG) for highest quality downloads
+        processed.originalMimeType, // Original MIME type (image/png, image/jpeg)
+        processed.originalSize, // Original file size
         processed.width,
         processed.height,
         processed.imageWebP.length, // Size of WebP image

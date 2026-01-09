@@ -18,6 +18,8 @@ export interface ProcessedImage {
   blurhash: string;
   thumbnailWebP: Buffer;
   imageWebP: Buffer;
+  originalImage: Buffer; // Original image in its native format (PNG/JPG)
+  originalMimeType: string; // Original MIME type (image/png, image/jpeg, etc.)
   width: number;
   height: number;
   originalSize: number;
@@ -96,6 +98,52 @@ export async function convertToWebP(
 }
 
 /**
+ * Resize image to specific dimensions while maintaining highest quality (PNG/JPG)
+ * @param imageBuffer - Original image buffer
+ * @param width - Target width
+ * @param height - Target height
+ * @param format - Output format ('png' or 'jpeg')
+ * @returns Resized image buffer in original format
+ */
+export async function resizeToDimensions(
+  imageBuffer: Buffer,
+  width: number,
+  height: number,
+  format: 'png' | 'jpeg' = 'jpeg'
+): Promise<Buffer> {
+  try {
+    let sharpInstance = sharp(imageBuffer);
+
+    // Resize to exact dimensions with highest quality
+    sharpInstance = sharpInstance.resize(width, height, {
+      fit: 'cover', // Cover the entire area, may crop
+      position: 'center', // Center the crop
+      withoutEnlargement: false, // Allow upscaling if needed
+    });
+
+    // Convert to format with highest quality settings
+    if (format === 'png') {
+      // PNG: Lossless compression
+      sharpInstance = sharpInstance.png({
+        compressionLevel: 6, // Good balance (0-9, 6 is default)
+        quality: 100, // Maximum quality
+      });
+    } else {
+      // JPEG: Highest quality
+      sharpInstance = sharpInstance.jpeg({
+        quality: 100, // Maximum quality (no compression loss)
+        mozjpeg: true, // Use mozjpeg for better compression at same quality
+      });
+    }
+
+    return await sharpInstance.toBuffer();
+  } catch (error) {
+    console.error('Error resizing image:', error);
+    throw error;
+  }
+}
+
+/**
  * Get image dimensions
  */
 export async function getImageDimensions(imageBuffer: Buffer): Promise<{ width: number; height: number }> {
@@ -112,20 +160,52 @@ export async function getImageDimensions(imageBuffer: Buffer): Promise<{ width: 
 }
 
 /**
- * Process uploaded image: Convert to WebP + Generate BlurHash
+ * Detect MIME type from image buffer
+ */
+export async function detectMimeType(imageBuffer: Buffer): Promise<string> {
+  try {
+    const metadata = await sharp(imageBuffer).metadata();
+    const format = metadata.format;
+    
+    // Map sharp format to MIME type
+    const mimeTypeMap: Record<string, string> = {
+      'jpeg': 'image/jpeg',
+      'jpg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+      'gif': 'image/gif',
+      'svg': 'image/svg+xml',
+      'tiff': 'image/tiff',
+      'bmp': 'image/bmp',
+    };
+    
+    return mimeTypeMap[format || 'jpeg'] || 'image/jpeg';
+  } catch (error) {
+    console.error('Error detecting MIME type:', error);
+    return 'image/jpeg'; // Default fallback
+  }
+}
+
+/**
+ * Process uploaded image: Convert to WebP + Generate BlurHash + Preserve Original
  * 
  * This is the main function to use for processing new uploads
+ * Preserves original image for highest quality downloads
  */
 export async function processUploadedImage(imageBuffer: Buffer): Promise<ProcessedImage> {
   try {
     // Get original dimensions and size
     const { width, height } = await getImageDimensions(imageBuffer);
     const originalSize = imageBuffer.length;
+    
+    // Detect original MIME type
+    const originalMimeType = await detectMimeType(imageBuffer);
 
     // Generate BlurHash (use original image for better quality)
     const blurhash = await generateBlurHash(imageBuffer);
 
     // Convert to WebP formats in parallel for better performance
+    // Preserve original image buffer for highest quality downloads
     const [thumbnailWebP, imageWebP] = await Promise.all([
       convertToWebP(imageBuffer, undefined, THUMBNAIL_SIZE), // Thumbnail: 150x150
       convertToWebP(imageBuffer, undefined), // Full image: original HD quality (no size limit)
@@ -135,6 +215,8 @@ export async function processUploadedImage(imageBuffer: Buffer): Promise<Process
       blurhash,
       thumbnailWebP,
       imageWebP,
+      originalImage: imageBuffer, // Preserve original for highest quality downloads
+      originalMimeType, // Store original format (PNG/JPG/etc)
       width,
       height,
       originalSize,
