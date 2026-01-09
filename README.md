@@ -157,7 +157,7 @@ Images are stored as **binary data (BYTEA) directly in PostgreSQL database**:
 - **Full Images** - Stored in `image_data` column (BYTEA, ~100KB - 500KB)
 - **Thumbnails** - Stored in `thumbnail_data` column (BYTEA, ~7KB)
 - **Metadata** - Stored alongside binary data (dimensions, MIME type, tags, etc.)
-- **Database Host** - Google Cloud PostgreSQL (34.46.166.6)
+- **Database Host** - Configured via environment variables
 
 ### Why Binary Storage?
 
@@ -235,7 +235,7 @@ The application provides RESTful API endpoints:
 
 ### Backend
 - **PostgreSQL (Google Cloud)** - Relational database with BYTEA binary storage
-  - Host: 34.46.166.6
+  - Host: Configured via DATABASE_HOST in .env.local
   - Images stored as binary data (BYTEA columns)
   - Connection pooling for performance
 - **node-postgres (pg)** - PostgreSQL client for Node.js
@@ -344,9 +344,9 @@ Create a `.env.local` file in the **root directory**:
 
 ```env
 # Database Configuration (Required)
-DATABASE_HOST=34.46.166.6
+DATABASE_HOST=your_database_host
 DATABASE_PORT=5432
-DATABASE_NAME=postgres
+DATABASE_NAME=your_database_name
 DATABASE_USER=postgres
 DATABASE_PASSWORD=your_password
 
@@ -369,7 +369,7 @@ SESSION_SECRET=your_random_session_secret_here
 ```
 
 **Database Details:**
-- **Host**: 34.46.166.6 (Google Cloud PostgreSQL)
+- **Host**: Configured via DATABASE_HOST in .env.local
 - **Total Images**: 239 (stored as binary BYTEA)
 - **Storage**: Images stored directly in database (`image_data`, `thumbnail_data` columns)
 
@@ -516,7 +516,7 @@ Application Starts
     ↓
 Create Connection Pool (5-10 connections)
     ↓
-Pool Connects to Google Cloud PostgreSQL (34.46.166.6:5432)
+Pool connects to database configured via environment variables
     ↓
 Connection Established ✅
 ```
@@ -858,7 +858,7 @@ If build fails:
 - Verify binary data exists in `image_data` and `thumbnail_data` columns
 - Check API endpoints are accessible: `/api/images/[id]/thumbnail`
 - Check browser console for CORS or network errors
-- Verify database connection to 34.46.166.6 is working
+- Verify database connection is working (check DATABASE_HOST in .env.local)
 - Check that API routes return proper `Content-Type` headers for binary data
 
 ### OAuth Authentication Issues

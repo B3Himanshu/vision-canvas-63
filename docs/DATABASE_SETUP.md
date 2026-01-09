@@ -1,8 +1,8 @@
-# Database Setup Guide: Switching to ImageStorage Database
+# Database Setup Guide: Live Database Configuration
 
 ## Overview
 
-This guide explains how to configure your project to use the `ImageStorage` database instead of the current database.
+This guide explains how to configure your project to use the live database (`34.121.114.117/images`).
 
 ---
 
@@ -19,25 +19,21 @@ The `.env.local` file should be located in:
 Copy this template and update with your actual credentials:
 
 ```env
-# Database Configuration
-DATABASE_HOST=34.46.166.6
+# Database Configuration (LIVE DATABASE)
+DATABASE_HOST=34.121.114.117
 DATABASE_PORT=5432
-DATABASE_NAME=ImageStorage
-DATABASE_USER=your_postgres_username
-DATABASE_PASSWORD=your_postgres_password
+DATABASE_NAME=images
+DATABASE_USER=postgres
+DATABASE_PASSWORD=your_database_password
 DATABASE_SSL=true
 ```
 
-### Important: Change DATABASE_NAME
+### Database Configuration
 
-**Key Change Required:**
-```env
-# Old (if different):
-# DATABASE_NAME=your_old_database_name
-
-# New:
-DATABASE_NAME=ImageStorage
-```
+The project uses the **live database** by default:
+- **Host**: `34.121.114.117`
+- **Database**: `images`
+- **SSL**: Required (`true`)
 
 ---
 
@@ -89,7 +85,7 @@ The application will:
 
 1. Application starts
 2. Reads `.env.local` file
-3. Connects to: `postgresql://USER:PASSWORD@34.46.166.6:5432/ImageStorage`
+3. Connects to: `postgresql://postgres:PASSWORD@34.121.114.117:5432/images`
 4. Uses connection pool (5-20 connections)
 
 ---
@@ -103,12 +99,12 @@ Here's a complete template with all variables:
 # PostgreSQL Database Configuration
 # ============================================
 
-# Database Server
-DATABASE_HOST=34.46.166.6
+# Database Server (LIVE DATABASE)
+DATABASE_HOST=34.121.114.117
 DATABASE_PORT=5432
 
-# Database Name - CHANGE THIS to ImageStorage
-DATABASE_NAME=ImageStorage
+# Database Name
+DATABASE_NAME=images
 
 # Database Credentials
 DATABASE_USER=your_postgresql_username
@@ -136,11 +132,11 @@ DATABASE_SSL=true
 ## Quick Setup Checklist
 
 - [ ] Locate your `.env.local` file (root or frontend directory)
-- [ ] Update `DATABASE_NAME=ImageStorage`
-- [ ] Verify `DATABASE_HOST=34.46.166.6` (or your database host)
-- [ ] Update `DATABASE_USER` with your PostgreSQL username
-- [ ] Update `DATABASE_PASSWORD` with your PostgreSQL password
-- [ ] Set `DATABASE_SSL=true` (for remote database)
+- [ ] Set `DATABASE_HOST=34.121.114.117` (live database)
+- [ ] Set `DATABASE_NAME=images` (live database name)
+- [ ] Set `DATABASE_USER=postgres`
+- [ ] Set `DATABASE_PASSWORD=your_database_password` (or your password)
+- [ ] Set `DATABASE_SSL=true` (required for remote database)
 - [ ] Save the file
 - [ ] Test connection: `cd backend && npm run migrate`
 - [ ] Verify tables are created in ImageStorage database
@@ -151,8 +147,8 @@ DATABASE_SSL=true
 ## Troubleshooting
 
 ### Error: "database does not exist"
-- ✅ Verify `ImageStorage` database exists in PostgreSQL
-- ✅ Check `DATABASE_NAME` is spelled correctly (case-sensitive)
+- ✅ Verify `images` database exists on the live server
+- ✅ Check `DATABASE_NAME=images` is spelled correctly
 
 ### Error: "password authentication failed"
 - ✅ Verify `DATABASE_USER` and `DATABASE_PASSWORD` are correct
@@ -195,11 +191,11 @@ DATABASE_SSL=true
 **Location**: `frontend/.env.local` or `.env.local` (root)
 
 ```env
-DATABASE_HOST=34.46.166.6
+DATABASE_HOST=34.121.114.117
 DATABASE_PORT=5432
-DATABASE_NAME=ImageStorage
+DATABASE_NAME=images
 DATABASE_USER=postgres
-DATABASE_PASSWORD=your_secure_password_here
+DATABASE_PASSWORD=your_database_password
 DATABASE_SSL=true
 ```
 
@@ -245,27 +241,25 @@ After configuring the database:
 
 ## Summary
 
-**To switch to ImageStorage database:**
+**To configure the live database:**
 
-1. Update `.env.local` file:
+1. Create/Update `.env.local` file:
    ```env
-   DATABASE_NAME=ImageStorage
+   DATABASE_HOST=34.121.114.117
+   DATABASE_NAME=images
+   DATABASE_USER=postgres
+   DATABASE_PASSWORD=your_database_password
+   DATABASE_SSL=true
    ```
 
-2. Update other credentials if needed:
-   ```env
-   DATABASE_USER=your_username
-   DATABASE_PASSWORD=your_password
-   ```
-
-3. Run migrations:
+2. Run migrations (if needed):
    ```bash
    cd backend && npm run migrate
    ```
 
-4. Restart server:
+3. Restart server:
    ```bash
    npm run dev
    ```
 
-That's it! Your application will now use the `ImageStorage` database.
+That's it! Your application will now use the live database (`34.121.114.117/images`).

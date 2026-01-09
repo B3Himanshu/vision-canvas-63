@@ -1,8 +1,8 @@
-# Switching to ImageStorage Database
+# Live Database Configuration
 
 ## Overview
 
-You want to switch from your current database to the new `ImageStorage` database you just created. This guide explains how to do it.
+This project uses the live database (`34.121.114.117/images`) as the primary database. This guide explains the configuration.
 
 ---
 
@@ -16,32 +16,25 @@ The database connection is configured in `.env.local`. Check these locations:
 
 ## Step 2: Update Database Configuration
 
-Open `frontend/.env.local` and update the `DATABASE_NAME` variable:
+Create or update `.env.local` in the root directory with the live database configuration:
 
 ```env
-# Before (example)
-DATABASE_NAME=your_old_database_name
-
-# After
-DATABASE_NAME=ImageStorage
-```
-
-**Keep all other variables the same:**
-- `DATABASE_HOST` - Your PostgreSQL server (e.g., `34.46.166.6`)
-- `DATABASE_PORT` - Usually `5432`
-- `DATABASE_USER` - Your PostgreSQL username
-- `DATABASE_PASSWORD` - Your PostgreSQL password
-- `DATABASE_SSL` - Usually `true` for remote connections
-
-**Complete Example:**
-```env
-DATABASE_HOST=34.46.166.6
+# Live Database Configuration
+DATABASE_HOST=34.121.114.117
 DATABASE_PORT=5432
-DATABASE_NAME=ImageStorage
-DATABASE_USER=your_username
-DATABASE_PASSWORD=your_password
+DATABASE_NAME=images
+DATABASE_USER=postgres
+DATABASE_PASSWORD=your_database_password
 DATABASE_SSL=true
 ```
+
+**Configuration Details:**
+- `DATABASE_HOST` - Live database server: `34.121.114.117`
+- `DATABASE_PORT` - PostgreSQL port: `5432`
+- `DATABASE_NAME` - Live database name: `images`
+- `DATABASE_USER` - Database user: `postgres`
+- `DATABASE_PASSWORD` - Your database password
+- `DATABASE_SSL` - Required: `true` (for remote connections)
 
 ---
 
@@ -55,18 +48,18 @@ npm run migrate
 ```
 This will attempt to connect and show any errors if the connection fails.
 
-### Option B: Check via pgAdmin
-In pgAdmin (which you already have open):
-1. Right-click on `ImageStorage` database
-2. Select "Query Tool"
+### Option B: Check via Database Client
+In your PostgreSQL client:
+1. Connect to `34.121.114.117:5432`
+2. Select `images` database
 3. Run: `SELECT current_database();`
-4. Should return: `ImageStorage`
+4. Should return: `images`
 
 ---
 
 ## Step 4: Run Migrations on New Database
 
-**IMPORTANT:** The `ImageStorage` database is new and empty. You need to run all migrations to create the required tables.
+**IMPORTANT:** Ensure the `images` database has all required tables. Run migrations if needed.
 
 ### Run All Migrations
 ```bash
@@ -97,7 +90,7 @@ This will:
 
 ## Step 5: Verify Tables Are Created
 
-In pgAdmin Query Tool for `ImageStorage` database:
+In your database client for the `images` database:
 ```sql
 -- Check if tables exist
 SELECT table_name 
@@ -117,18 +110,16 @@ WHERE table_schema = 'public';
 After changing the database:
 1. Stop your dev server (Ctrl+C)
 2. Restart: `npm run dev`
-3. The app will now use the `ImageStorage` database
+3. The app will now use the live database (`34.121.114.117/images`)
 
 ---
 
 ## Important Notes
 
-### Database is Empty
-- The `ImageStorage` database is **brand new and empty**
-- You'll need to:
-  - Run migrations (creates tables)
-  - Upload new images (no existing images will be migrated)
-  - Or export/import data if you want to move images from old database
+### Database Configuration
+- The project uses the **live database** (`34.121.114.117/images`)
+- All data is stored in the live database
+- No localhost database is needed
 
 ### Data Migration (Optional)
 
@@ -157,14 +148,14 @@ You have export scripts in `backend/scripts/`:
 ## Troubleshooting
 
 ### Error: "database does not exist"
-- Check spelling: `ImageStorage` (case-sensitive in some PostgreSQL setups)
-- Verify database exists in pgAdmin
-- Try: `ImageStorage` or `imagestorage` (lowercase)
+- Check spelling: `images` (case-sensitive)
+- Verify database exists on the live server (`34.121.114.117`)
+- Ensure you have network access to the database server
 
 ### Error: "permission denied"
-- Verify user has access to `ImageStorage` database
-- In pgAdmin: Right-click `ImageStorage` → Properties → Privileges
-- Grant your user access
+- Verify user has access to `images` database
+- Check database user permissions on the live server
+- Ensure credentials are correct in `.env.local`
 
 ### Error: "connection refused"
 - Check `DATABASE_HOST` is correct
@@ -180,18 +171,19 @@ You have export scripts in `backend/scripts/`:
 
 ## Quick Summary
 
-1. ✅ Edit `frontend/.env.local`
-2. ✅ Change `DATABASE_NAME=ImageStorage`
-3. ✅ Run `cd backend && npm run migrate`
-4. ✅ Restart dev server: `npm run dev`
-5. ✅ Upload images or migrate data
+1. ✅ Create/Edit `.env.local` in root directory
+2. ✅ Set `DATABASE_HOST=34.121.114.117`
+3. ✅ Set `DATABASE_NAME=images`
+4. ✅ Set `DATABASE_SSL=true`
+5. ✅ Run `cd backend && npm run migrate` (if needed)
+6. ✅ Restart dev server: `npm run dev`
 
 ---
 
 ## Environment File Location
 
 Your `.env.local` should be in:
-- **Primary**: `frontend/.env.local` (Next.js uses this)
-- **Backup**: Root `.env.local` (if you have one)
+- **Root directory**: `.env.local` (recommended)
+- **Alternative**: `frontend/.env.local` (Next.js will also read this)
 
-**Make sure to update the one in `frontend/` folder!**
+**Important:** Never commit `.env.local` to git (it contains sensitive credentials).

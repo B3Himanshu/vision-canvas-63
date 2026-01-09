@@ -7,16 +7,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 
-// Database configuration from env.example
+// Database configuration - uses environment variables from .env.local
+// These are fallback defaults - should be overridden by .env.local
 const DB_CONFIG = {
-  DATABASE_HOST: 'localhost',
-  DATABASE_PORT: '5432',
-  DATABASE_NAME: 'ImageStorage',
-  DATABASE_USER: 'postgres',
-  DATABASE_PASSWORD: 'Gaurav@28',
-  DATABASE_SSL: 'false',
-  DATABASE_CONNECTION_TIMEOUT: '10000',
-  DATABASE_STATEMENT_TIMEOUT: '120000',
+  DATABASE_HOST: process.env.DATABASE_HOST || 'localhost',
+  DATABASE_PORT: process.env.DATABASE_PORT || '5432',
+  DATABASE_NAME: process.env.DATABASE_NAME || 'images',
+  DATABASE_USER: process.env.DATABASE_USER || 'postgres',
+  DATABASE_PASSWORD: process.env.DATABASE_PASSWORD || '',
+  DATABASE_SSL: process.env.DATABASE_SSL || 'false',
+  DATABASE_CONNECTION_TIMEOUT: process.env.DATABASE_CONNECTION_TIMEOUT || '10000',
+  DATABASE_STATEMENT_TIMEOUT: process.env.DATABASE_STATEMENT_TIMEOUT || '120000',
 };
 
 // Set environment variables FIRST

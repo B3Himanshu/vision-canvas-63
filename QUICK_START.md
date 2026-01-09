@@ -4,7 +4,7 @@
 
 ### Prerequisites Check
 - ✅ Node.js 18+ installed
-- ✅ PostgreSQL database accessible (34.46.166.6:5432)
+- ✅ PostgreSQL database accessible (34.121.114.117:5432)
 - ✅ Database credentials available
 
 ---
@@ -43,12 +43,12 @@ New-Item -Path .env.local -ItemType File -Force
 
 **Then edit `.env.local` and add:**
 ```env
-# Database Configuration (Required)
-DATABASE_HOST=34.46.166.6
+# Database Configuration (Required - LIVE DATABASE)
+DATABASE_HOST=34.121.114.117
 DATABASE_PORT=5432
-DATABASE_NAME=postgres
+DATABASE_NAME=images
 DATABASE_USER=postgres
-DATABASE_PASSWORD=your_actual_password_here
+DATABASE_PASSWORD=your_database_password
 
 # Optional: Database timeouts
 DATABASE_CONNECTION_TIMEOUT=60000
@@ -163,7 +163,7 @@ npm run start            # Start production server (requires build first)
 
 **Solution:**
 1. Verify database credentials in `.env.local`
-2. Check if database host (34.46.166.6) is accessible
+2. Check if database host (34.121.114.117) is accessible
 3. Verify firewall/network settings allow connection
 4. Check if PostgreSQL is running
 

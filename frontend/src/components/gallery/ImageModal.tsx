@@ -748,7 +748,7 @@ const ImageModal = ({ image, onClose, onNavigate, currentPage }: ImageModalProps
                 {image.tags.map((tag) => (
                   <Link 
                     key={tag}
-                    href={`/tag/${tag}`}
+                    href={`/gallery?tags=${encodeURIComponent(tag)}`}
                     onClick={onClose}
                     className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-sm hover:bg-primary hover:text-primary-foreground transition-colors"
                   >

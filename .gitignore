@@ -30,14 +30,23 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# local env files - NEVER COMMIT THESE
 .env*.local
 .env
 .env.local
+.env.*.local
+*.env
+*.env.local
 backend/.env
 backend/.env.local
+backend/.env.*
 frontend/.env
 frontend/.env.local
+frontend/.env.*
+# Any file with credentials
+*credentials*
+*secrets*
+*password*
 
 # vercel
 .vercel

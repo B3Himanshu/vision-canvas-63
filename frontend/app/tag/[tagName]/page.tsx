@@ -1,9 +1,9 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Tag, Grid3X3, LayoutList } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -48,6 +48,7 @@ const getRelatedTags = (tag: string) => {
 
 export default function TagPage() {
   const params = useParams();
+  const router = useRouter();
   const tagName = params.tagName as string;
   const [selectedImage, setSelectedImage] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'masonry'>('masonry');
@@ -55,6 +56,13 @@ export default function TagPage() {
   const tag = tagName || 'business';
   const images = generateTagImages(tag);
   const relatedTags = getRelatedTags(tag);
+
+  // Redirect to gallery with tag filter
+  useEffect(() => {
+    if (tagName) {
+      router.replace(`/gallery?tags=${encodeURIComponent(tagName)}`);
+    }
+  }, [tagName, router]);
 
   const handleNavigate = (direction: 'prev' | 'next') => {
     if (!selectedImage) return;
@@ -105,7 +113,7 @@ export default function TagPage() {
               {relatedTags.map((relatedTag) => (
                 <Link
                   key={relatedTag}
-                  href={`/tag/${relatedTag}`}
+                  href={`/gallery?tags=${encodeURIComponent(relatedTag)}`}
                   className="px-4 py-2 rounded-full bg-secondary/50 hover:bg-secondary text-secondary-foreground text-sm transition-colors"
                 >
                   #{relatedTag}

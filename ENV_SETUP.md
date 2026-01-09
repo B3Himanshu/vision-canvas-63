@@ -1,26 +1,26 @@
 # Environment Configuration Guide
 
-## Quick Setup for Localhost Database
+## Quick Setup for Live Database
 
 ### Step 1: Create `.env.local` file
 
 Copy the example file:
 ```bash
-cp .env.example .env.local
+cp env.example .env.local
 ```
 
 Or create `.env.local` manually in the root directory with this content:
 
 ```env
-# Database Configuration
-DATABASE_HOST=localhost
+# Database Configuration (LIVE DATABASE)
+DATABASE_HOST=34.121.114.117
 DATABASE_PORT=5432
-DATABASE_NAME=ImageStorage
+DATABASE_NAME=images
 DATABASE_USER=postgres
-DATABASE_PASSWORD=your_postgres_password_here
+DATABASE_PASSWORD=your_database_password
 
-# SSL Configuration (false for localhost)
-DATABASE_SSL=false
+# SSL Configuration (required for remote database)
+DATABASE_SSL=true
 
 # Optional Settings
 DATABASE_CONNECTION_TIMEOUT=10000
@@ -29,22 +29,14 @@ NODE_ENV=development
 NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
 
-### Step 2: Update Database Credentials
+### Step 2: Database Credentials
 
-1. **DATABASE_NAME**: Should match your pgAdmin database name exactly
-   - If you created it as `ImageStorage` (with quotes), use `ImageStorage`
-   - If you created it without quotes, PostgreSQL converts it to lowercase: `imagestorage`
-   - Check in pgAdmin to see the exact name
-
-2. **DATABASE_USER**: Usually `postgres` for local installations
-   - Or the username you configured in PostgreSQL
-
-3. **DATABASE_PASSWORD**: Your PostgreSQL password
-   - The password you set when installing PostgreSQL
-   - Or the password for the `postgres` user
-
-4. **DATABASE_PORT**: Default is `5432`
-   - Check in pgAdmin if you're using a different port
+The project is configured to use the **live database** by default:
+- **DATABASE_HOST**: `34.121.114.117` (live database server)
+- **DATABASE_NAME**: `images` (live database name)
+- **DATABASE_USER**: `postgres`
+- **DATABASE_PASSWORD**: Set in `.env.local` (never commit to git)
+- **DATABASE_SSL**: `true` (required for remote connections)
 
 ### Step 3: Verify Database Connection
 
@@ -64,9 +56,9 @@ This will:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_HOST` | Database server hostname | `localhost` |
+| `DATABASE_HOST` | Database server hostname | `34.121.114.117` |
 | `DATABASE_PORT` | Database server port | `5432` |
-| `DATABASE_NAME` | Database name | `ImageStorage` |
+| `DATABASE_NAME` | Database name | `images` |
 | `DATABASE_USER` | Database username | `postgres` |
 | `DATABASE_PASSWORD` | Database password | `your_password` |
 
@@ -74,7 +66,7 @@ This will:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DATABASE_SSL` | Enable SSL connection | `false` (for localhost) |
+| `DATABASE_SSL` | Enable SSL connection | `true` (required for live database) |
 | `DATABASE_CONNECTION_TIMEOUT` | Connection timeout (ms) | `10000` |
 | `DATABASE_STATEMENT_TIMEOUT` | Query timeout (ms) | `120000` |
 | `NODE_ENV` | Environment mode | `development` |
@@ -98,21 +90,12 @@ This will:
 - Check you're connected to the right PostgreSQL server
 
 ### SSL Errors
-- For localhost, set `DATABASE_SSL=false`
-- For remote databases, set `DATABASE_SSL=true`
+- For live database, ensure `DATABASE_SSL=true`
+- SSL is required for remote database connections
 
-## Migration from Remote Database
+## Important Notes
 
-If you're migrating from the remote database (34.46.166.6), you can temporarily use:
-
-```env
-# Old remote database (for migration)
-DATABASE_HOST=34.46.166.6
-DATABASE_PORT=5432
-DATABASE_NAME=postgres
-DATABASE_USER=postgres
-DATABASE_PASSWORD=your_remote_password
-DATABASE_SSL=true
-```
-
-Then switch back to localhost after migration.
+- ✅ The project uses the **live database** (`34.121.114.117/images`) by default
+- ✅ No localhost database configuration needed
+- ✅ All data is stored in the live database
+- ⚠️ Never commit `.env.local` to git (contains sensitive credentials)

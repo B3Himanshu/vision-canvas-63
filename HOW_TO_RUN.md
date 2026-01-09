@@ -23,9 +23,9 @@ Create `.env.local` file in the **root directory** with your database credential
 2. Add this content (replace password with your actual database password):
 
 ```env
-DATABASE_HOST=34.46.166.6
+DATABASE_HOST=your_database_host
 DATABASE_PORT=5432
-DATABASE_NAME=postgres
+DATABASE_NAME=your_database_name
 DATABASE_USER=postgres
 DATABASE_PASSWORD=your_actual_password_here
 DATABASE_SSL=true
@@ -35,9 +35,9 @@ DATABASE_SSL=true
 ```powershell
 cd "c:\Users\Gaurav Kumar\OneDrive\Desktop\company\imageProject"
 @"
-DATABASE_HOST=34.46.166.6
+DATABASE_HOST=your_database_host
 DATABASE_PORT=5432
-DATABASE_NAME=postgres
+DATABASE_NAME=your_database_name
 DATABASE_USER=postgres
 DATABASE_PASSWORD=your_actual_password_here
 DATABASE_SSL=true
