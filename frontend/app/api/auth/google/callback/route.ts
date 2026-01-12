@@ -65,11 +65,6 @@ export async function GET(request: NextRequest) {
     const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback';
     
-    // Debug log for verification (remove after testing)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('GOOGLE_CLIENT_ID =', googleClientId);
-    }
-    
     if (!googleClientId || !googleClientSecret) {
       console.error('Google OAuth credentials not configured:', {
         hasClientId: !!googleClientId,
@@ -118,7 +113,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userInfo = await userInfoResponse.json();
-    const { id: googleId, email, name, picture } = userInfo;
+    const { id: googleId, email, name } = userInfo;
 
     if (!email) {
       return NextResponse.redirect(new URL('/?error=no_email', request.url));

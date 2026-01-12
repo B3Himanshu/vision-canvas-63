@@ -48,11 +48,6 @@ export async function GET(request: NextRequest) {
     // Store state in cookie for verification
     const authUrl = getGoogleAuthUrl(state);
     
-    // Log for debugging (remove in production)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('GOOGLE_CLIENT_ID =', googleClientId);
-    }
-    
     const response = NextResponse.redirect(authUrl);
     response.cookies.set('oauth_state', state, {
       httpOnly: true,

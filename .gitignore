@@ -30,6 +30,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+.cursor
 # local env files - NEVER COMMIT THESE
 .env*.local
 .env
@@ -64,6 +65,7 @@ webp_images/
 # IDE
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~

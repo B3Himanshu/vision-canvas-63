@@ -5,9 +5,11 @@ import { getUserById } from '@/backend/lib/users';
 export async function GET(request: NextRequest) {
   try {
     if (!isAuthenticated(request)) {
+      // Return 200 with authenticated: false to prevent console errors
+      // 401 is expected when not authenticated, so we handle it gracefully
       return NextResponse.json(
-        { success: false, error: 'Not authenticated' },
-        { status: 401 }
+        { success: false, authenticated: false, error: 'Not authenticated' },
+        { status: 200 }
       );
     }
 
@@ -33,6 +35,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      authenticated: true,
       data: {
         id: userResult.data.id,
         email: userResult.data.email,

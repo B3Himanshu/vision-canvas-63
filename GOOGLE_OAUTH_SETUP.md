@@ -10,10 +10,10 @@
 
 ## ✅ Google Cloud Console Configuration
 
-Your OAuth credentials are properly configured:
-- **Client ID**: `303658983365-7ciuinpusc711d7csr4lqcs79g9fm1el.apps.googleusercontent.com`
-- **Redirect URI**: `http://localhost:3000/api/auth/google/callback` ✓ (Already configured)
-- **JavaScript Origins**: `http://localhost:3000` ✓ (Already configured)
+Your OAuth credentials should be configured:
+- **Client ID**: (Set in `.env.local` as `GOOGLE_CLIENT_ID`)
+- **Redirect URI**: `http://localhost:3000/api/auth/google/callback` ✓
+- **JavaScript Origins**: `http://localhost:3000` ✓
 
 Everything is set up correctly!
 
@@ -37,15 +37,17 @@ Everything is set up correctly!
 
 ## 📋 Environment Variables (Already Set)
 
-The following are configured in `.env.local`:
+The following are configured in `.env.local` (NEVER commit this file to git):
 
 ```
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=303658983365-7ciuinpusc711d7csr4lqcs79g9fm1el.apps.googleusercontent.com
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id_here
 NEXT_PUBLIC_GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
-GOOGLE_CLIENT_ID=303658983365-7ciuinpusc711d7csr4lqcs79g9fm1el.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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
+GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
 ```
+
+**⚠️ SECURITY WARNING**: Never commit actual credentials to git. Use placeholders in documentation.
 
 ## 🔒 Security Notes
 
@@ -57,9 +59,9 @@ GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
 ## 🐛 Troubleshooting
 
 If you get "redirect_uri_mismatch" error:
-- The redirect URI is already configured correctly in Google Cloud Console
+- Verify that the redirect URI is configured correctly in Google Cloud Console
 - Verify that `.env.local` has the correct `GOOGLE_REDIRECT_URI`
-- Make sure you're using the correct Client ID: `303658983365-7ciuinpusc711d7csr4lqcs79g9fm1el`
+- Make sure you're using the correct Client ID from your Google Cloud Console
 
 If authentication fails:
 - Check browser console for errors

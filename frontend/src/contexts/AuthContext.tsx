@@ -35,7 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.data) {
+        // Check if authenticated flag is present and true, or if data exists
+        if (data.authenticated && data.success && data.data) {
           setUser({
             id: parseInt(data.data.id),
             email: data.data.email || '',
@@ -45,19 +46,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
           setError(null);
         } else {
+          // Not authenticated (authenticated: false or no data)
           setUser(null);
+          setError(null);
         }
-      } else if (response.status === 401) {
-        // 401 is expected when not authenticated - not an error
-        setUser(null);
-        setError(null);
       } else {
-        // Only log actual errors (not 401)
+        // Only log actual errors (not 200 with authenticated: false)
         console.error('Auth check failed:', response.status, response.statusText);
         setUser(null);
       }
     } catch (err) {
-      // Only log network errors, not expected 401s
+      // Only log network errors
       if (err instanceof TypeError && err.message.includes('fetch')) {
         console.error('Network error checking auth status:', err);
       }
