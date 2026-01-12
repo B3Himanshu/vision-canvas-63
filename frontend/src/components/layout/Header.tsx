@@ -108,7 +108,7 @@ const Header = () => {
               Favorites
             </Link>
             <Link 
-              href="/gallery?category=nature" 
+              href="/gallery" 
               className="px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all font-medium"
             >
               Categories

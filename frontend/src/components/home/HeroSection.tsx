@@ -61,7 +61,7 @@ const HeroSection = () => {
   };
 
   const handleCategoryClick = (category: string) => {
-    router.push(`/gallery?category=${category.toLowerCase()}`);
+    router.push('/gallery');
   };
 
   return (

@@ -103,23 +103,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Check authentication status on mount and after OAuth callback
   useEffect(() => {
-    checkAuthStatus();
-    
-    // Check for OAuth callback errors in URL
+    // Check for OAuth callback indicators in URL
     const urlParams = new URLSearchParams(window.location.search);
     const oauthError = urlParams.get('error');
+    const hasOAuthParams = urlParams.has('code') || urlParams.has('state') || oauthError;
     
     if (oauthError) {
       setError('Authentication failed. Please try again.');
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
-    } else if (window.location.pathname === '/' && !oauthError) {
-      // If we're on home page, might be returning from OAuth
-      // Refresh auth status to pick up new session after a short delay
+      checkAuthStatus();
+    } else if (hasOAuthParams) {
+      // Only do delayed check if we detect OAuth callback params
+      // Clean up OAuth params first
+      window.history.replaceState({}, '', window.location.pathname);
+      // Check auth status after a short delay to allow session to be established
       const timer = setTimeout(() => {
         checkAuthStatus();
-      }, 500);
+      }, 300);
       return () => clearTimeout(timer);
+    } else {
+      // Normal mount - just check once
+      checkAuthStatus();
     }
   }, [checkAuthStatus]);
 

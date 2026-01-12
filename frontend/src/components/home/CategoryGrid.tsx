@@ -90,7 +90,7 @@ const CategoryGrid = () => {
               transition={{ delay: index * 0.05, duration: 0.4 }}
             >
               <Link 
-                href={`/gallery?category=${category.name.toLowerCase()}`}
+                href="/gallery"
                 className="block group"
               >
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden hover-3d">
